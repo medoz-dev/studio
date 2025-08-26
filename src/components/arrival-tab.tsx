@@ -7,12 +7,13 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { boissons, type Boisson } from '@/lib/data';
+import { type Boisson } from '@/lib/data';
 import { Printer, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface ArrivalTabProps {
   onArrivalUpdate: (total: number) => void;
+  boissons: Boisson[];
 }
 
 interface ArrivalItem {
@@ -22,7 +23,7 @@ interface ArrivalItem {
   value: number;
 }
 
-export default function ArrivalTab({ onArrivalUpdate }: ArrivalTabProps) {
+export default function ArrivalTab({ onArrivalUpdate, boissons }: ArrivalTabProps) {
   const [arrivalDate, setArrivalDate] = useState(new Date().toISOString().split('T')[0]);
   const [arrivalQuantities, setArrivalQuantities] = useState<Record<string, { quantity: number; caseSize?: number }>>({});
   const { toast } = useToast();
@@ -41,7 +42,7 @@ export default function ArrivalTab({ onArrivalUpdate }: ArrivalTabProps) {
 
         return { boisson, quantity, caseSize: selectedCaseSize, value };
     });
-  }, [arrivalQuantities]);
+  }, [arrivalQuantities, boissons]);
 
   const totalArrivalValue = useMemo(() => {
     return arrivalDetails.reduce((acc, item) => acc + item.value, 0);

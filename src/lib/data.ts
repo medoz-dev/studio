@@ -8,7 +8,7 @@ export type Boisson = {
   specialUnit?: number;
 };
 
-export const boissons: Boisson[] = [
+export const defaultBoissons: Boisson[] = [
     { nom: "AWOYO", prix: 1000, trous: 12, type: "casier" },
     { nom: "B.fort gr", prix: 600, trous: [12, 20], type: "casier" },
     { nom: "B.Fort pt", prix: 400, trous: 24, type: "casier" },

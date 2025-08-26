@@ -6,12 +6,13 @@ import { Table, TableBody, TableCell, TableFooter as TableFoot, TableHead, Table
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { boissons, type Boisson } from '@/lib/data';
+import { type Boisson } from '@/lib/data';
 import { Printer, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface StockTabProps {
   onStockUpdate: (total: number) => void;
+  boissons: Boisson[];
 }
 
 interface StockItem {
@@ -20,7 +21,7 @@ interface StockItem {
   value: number;
 }
 
-export default function StockTab({ onStockUpdate }: StockTabProps) {
+export default function StockTab({ onStockUpdate, boissons }: StockTabProps) {
   const [stockDate, setStockDate] = useState(new Date().toISOString().split('T')[0]);
   const [stockQuantities, setStockQuantities] = useState<Record<string, number>>({});
   const { toast } = useToast();
@@ -37,7 +38,7 @@ export default function StockTab({ onStockUpdate }: StockTabProps) {
       }
       return { boisson, quantity, value };
     });
-  }, [stockQuantities]);
+  }, [stockQuantities, boissons]);
 
   const totalStockValue = useMemo(() => {
     return stockDetails.reduce((acc, item) => acc + item.value, 0);
