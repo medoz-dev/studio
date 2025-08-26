@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useBoissons } from "@/hooks/useBoissons";
 import { type Boisson } from "@/lib/data";
@@ -129,7 +129,7 @@ function BoissonFormDialog({ isOpen, setIsOpen, boisson, addBoisson, updateBoiss
     const [formData, setFormData] = useState<Partial<Boisson>>({});
     const { toast } = useToast();
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (boisson) {
             setFormData({
                 ...boisson,
