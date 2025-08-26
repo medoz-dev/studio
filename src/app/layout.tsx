@@ -3,8 +3,8 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: 'Le Régal Inventory',
-  description: 'Système de gestion d\'inventaire pour Le Régal',
+  title: 'Inventaire Pro',
+  description: 'Système de gestion d\'inventaire par Inventaire Pro',
 };
 
 export default function RootLayout({

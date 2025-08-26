@@ -61,7 +61,7 @@ export default function Home() {
     <>
       <header className="bg-primary text-primary-foreground shadow-md">
         <div className="container mx-auto py-6 text-center relative">
-          <h1 className="text-4xl font-bold font-headline">Le Régal</h1>
+          <h1 className="text-4xl font-bold font-headline">Inventaire Pro</h1>
           <p className="text-lg mt-2">Système de Gestion d'Inventaire</p>
            <div className="absolute top-1/2 -translate-y-1/2 right-4">
              <Link href="/admin">
