@@ -3,8 +3,8 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: 'Chez Maman-Didi Inventory',
-  description: 'Système de gestion d\'inventaire pour BAR RESTAURANT CHEZ MAMAN-DIDI',
+  title: 'Le Régal Inventory',
+  description: 'Système de gestion d\'inventaire pour Le Régal',
 };
 
 export default function RootLayout({
