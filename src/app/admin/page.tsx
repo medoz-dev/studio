@@ -47,7 +47,7 @@ export default function AdminPage() {
                 <div className="container mx-auto py-6 text-center relative">
                     <div className="absolute top-1/2 -translate-y-1/2 left-4">
                         <Link href="/">
-                            <Button variant="outline" size="icon">
+                            <Button variant="secondary" size="icon">
                                 <ArrowLeft />
                                 <span className="sr-only">Retour</span>
                             </Button>
