@@ -103,11 +103,7 @@ export default function CalculationsTab({ initialOldStock, setInitialOldStock, a
             });
             return;
         }
-        const originalTitle = document.title;
-        const date = new Date(calculationDate).toLocaleDateString('fr-FR');
-        document.title = `Inventaire du ${date} pour ${managerName}`;
         window.print();
-        document.title = originalTitle;
     }
 
     const formattedDate = new Date(calculationDate).toLocaleDateString('fr-FR');
@@ -124,7 +120,7 @@ export default function CalculationsTab({ initialOldStock, setInitialOldStock, a
                             <span className="block text-xs text-red-500 italic print:hidden mt-2">
                                 <strong>Note:</strong> Seul cet onglet de calculs sera imprimé.<br />
                                 Lors de l'enregistrement en PDF, nommez le fichier comme ceci : <br/>
-                                <strong className="break-all">"{suggestedFileName}"</strong>
+                                <strong className="break-all">"Inventaire du 27/08/2025 pour (nom du gérant)"</strong>
                             </span>
                         </CardDescription>
                     </CardHeader>
