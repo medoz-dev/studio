@@ -11,7 +11,7 @@ const firebaseConfig = {
     apiKey: "AIzaSyADSUgm3BFkJP8P6nUwzIAioFMyMUt-Ccg",
     authDomain: "inventaire-pro.firebaseapp.com",
     projectId: "inventaire-pro",
-    storageBucket: "inventaire-pro.appspot.com",
+    storageBucket: "inventaire-pro.firebasestorage.app",
     messagingSenderId: "876091676084",
     appId: "1:876091676084:web:c3ab3e842278640c140ee1"
 };
