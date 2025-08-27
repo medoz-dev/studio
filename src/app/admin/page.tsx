@@ -7,34 +7,33 @@ import { type Boisson } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Trash2, Edit, PlusCircle, ArrowLeft } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 export default function AdminPage() {
     const { boissons, addBoisson, updateBoisson, deleteBoisson, isLoading } = useBoissons();
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingBoisson, setEditingBoisson] = useState<Boisson | null>(null);
     const { toast } = useToast();
 
     const openAddDialog = () => {
         setEditingBoisson(null);
-        setIsDialogOpen(true);
+        setIsFormOpen(true);
     };
 
     const openEditDialog = (boisson: Boisson) => {
         setEditingBoisson(boisson);
-        setIsDialogOpen(true);
+        setIsFormOpen(true);
     };
 
     const handleDelete = (nom: string) => {
-        if (window.confirm(`Êtes-vous sûr de vouloir supprimer "${nom}" ?`)) {
-            deleteBoisson(nom);
-            toast({ title: "Succès", description: "Boisson supprimée." });
-        }
+        deleteBoisson(nom);
+        toast({ title: "Succès", description: "Boisson supprimée." });
     };
 
     if (isLoading) {
@@ -93,9 +92,25 @@ export default function AdminPage() {
                                                 <Button variant="ghost" size="icon" onClick={() => openEditDialog(boisson)}>
                                                     <Edit className="h-4 w-4" />
                                                 </Button>
-                                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDelete(boisson.nom)}>
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>Êtes-vous sûr?</AlertDialogTitle>
+                                                            <AlertDialogDescription>
+                                                                Cette action est irréversible. Cela supprimera définitivement la boisson "{boisson.nom}".
+                                                            </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => handleDelete(boisson.nom)}>Supprimer</AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
                                             </TableCell>
                                         </TableRow>
                                     ))}
@@ -106,8 +121,8 @@ export default function AdminPage() {
                 </Card>
             </main>
             <BoissonFormDialog
-                isOpen={isDialogOpen}
-                setIsOpen={setIsDialogOpen}
+                isOpen={isFormOpen}
+                setIsOpen={setIsFormOpen}
                 boisson={editingBoisson}
                 addBoisson={addBoisson}
                 updateBoisson={updateBoisson}
