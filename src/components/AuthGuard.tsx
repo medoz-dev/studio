@@ -98,8 +98,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       return <>{children}</>;
     } else {
       // Show subscription expired modal instead of content
-      // Replace with your actual contact info
-      return <SubscriptionModal isOpen={true} contactInfo="WhatsApp: +XX XXXXXXXX" />;
+      return <SubscriptionModal isOpen={true} contactInfo="contact@inventairepro.com" />;
     }
   }
 
