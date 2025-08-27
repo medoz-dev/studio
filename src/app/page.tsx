@@ -23,6 +23,7 @@ export default function Home() {
   const [arrivalTotal, setArrivalTotal] = useState(0);
   const [arrivalDetails, setArrivalDetails] = useState<ArrivalItem[]>([]);
   const [oldStock, setOldStock] = useState(0);
+  const [stockQuantities, setStockQuantities] = useState<Record<string, number>>({});
   const { toast } = useToast();
   const { boissons, isLoading } = useBoissons();
 
@@ -40,10 +41,20 @@ export default function Home() {
         setArrivalTotal(total);
         setArrivalDetails(parsedArrivals);
       }
+      const currentStockQuantities = localStorage.getItem('currentStockQuantities');
+      if (currentStockQuantities) {
+        setStockQuantities(JSON.parse(currentStockQuantities));
+      }
     } catch (error) {
       console.error("Failed to load data from localStorage", error);
     }
   }, []);
+
+  const handleStockQuantitiesChange = (quantities: Record<string, number>) => {
+      setStockQuantities(quantities);
+      localStorage.setItem('currentStockQuantities', JSON.stringify(quantities));
+  };
+
 
   const handleSaveResults = (calculationData: CalculationData, expenses: Expense[]) => {
     try {
@@ -67,6 +78,7 @@ export default function Home() {
         localStorage.setItem('stockData', JSON.stringify(stockData));
         localStorage.removeItem('allArrivalsData');
         localStorage.removeItem('currentStockDetails');
+        localStorage.removeItem('currentStockQuantities');
 
         toast({
             title: "Succès!",
@@ -77,6 +89,7 @@ export default function Home() {
         setOldStock(calculationData.currentStockTotal);
         setArrivalTotal(0);
         setArrivalDetails([]);
+        setStockQuantities({});
 
     } catch (error) {
         console.error("Failed to save results to localStorage", error);
@@ -121,7 +134,12 @@ export default function Home() {
             <TabsTrigger value="calculations">Calculs Généraux</TabsTrigger>
           </TabsList>
           <TabsContent value="stock" className="printable-area">
-            <StockTab onStockUpdate={(total, details) => { setStockTotal(total); setStockDetails(details); }} boissons={boissons} />
+            <StockTab 
+              onStockUpdate={(total, details) => { setStockTotal(total); setStockDetails(details); }} 
+              boissons={boissons} 
+              stockQuantities={stockQuantities}
+              onQuantityChange={handleStockQuantitiesChange}
+            />
           </TabsContent>
           <TabsContent value="arrival" className="printable-area">
             <ArrivalTab onArrivalUpdate={(total, details) => { setArrivalTotal(total); setArrivalDetails(details); }} boissons={boissons} />

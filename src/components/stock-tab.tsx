@@ -20,11 +20,12 @@ export interface StockItem {
 interface StockTabProps {
   onStockUpdate: (total: number, details: StockItem[]) => void;
   boissons: Boisson[];
+  stockQuantities: Record<string, number>;
+  onQuantityChange: (quantities: Record<string, number>) => void;
 }
 
-export default function StockTab({ onStockUpdate, boissons }: StockTabProps) {
+export default function StockTab({ onStockUpdate, boissons, stockQuantities, onQuantityChange }: StockTabProps) {
   const [stockDate, setStockDate] = useState(new Date().toISOString().split('T')[0]);
-  const [stockQuantities, setStockQuantities] = useState<Record<string, number>>({});
   const { toast } = useToast();
 
   const stockDetails: StockItem[] = useMemo(() => {
@@ -52,7 +53,8 @@ export default function StockTab({ onStockUpdate, boissons }: StockTabProps) {
   const handleQuantityChange = (nom: string, value: string) => {
     const quantity = Number(value);
     if (!isNaN(quantity) && quantity >= 0) {
-      setStockQuantities(prev => ({ ...prev, [nom]: quantity }));
+        const newQuantities = { ...stockQuantities, [nom]: quantity };
+        onQuantityChange(newQuantities);
     }
   };
 
