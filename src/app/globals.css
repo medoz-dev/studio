@@ -86,3 +86,23 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+@media print {
+  body {
+    background-color: white;
+  }
+  header, .no-print {
+    display: none;
+  }
+  main {
+    padding: 0;
+    margin: 0;
+  }
+  .printable-area {
+    display: block !important;
+  }
+  .printable-area .card {
+    box-shadow: none;
+    border: 1px solid #ccc;
+  }
+}

@@ -94,7 +94,19 @@ export default function CalculationsTab({ initialOldStock, setInitialOldStock, a
     }
     
     const printReport = () => {
+        if (!managerName.trim()) {
+            toast({
+                title: "Attention",
+                description: "Veuillez entrer le nom du gérant avant d'imprimer.",
+                variant: "destructive"
+            });
+            return;
+        }
+        const originalTitle = document.title;
+        const date = new Date(calculationDate).toLocaleDateString('fr-FR');
+        document.title = `Inventaire du ${date} pour ${managerName}`;
         window.print();
+        document.title = originalTitle;
     }
     
     return (
@@ -103,7 +115,12 @@ export default function CalculationsTab({ initialOldStock, setInitialOldStock, a
                 <Card>
                     <CardHeader>
                         <CardTitle>Résumé des données</CardTitle>
-                        <CardDescription>Date du calcul: {new Date(calculationDate).toLocaleDateString('fr-FR')}</CardDescription>
+                        <CardDescription>
+                            Date du calcul: {new Date(calculationDate).toLocaleDateString('fr-FR')}
+                            <span className="block text-xs text-red-500 italic print:hidden">
+                                Note: Seul cet onglet de calculs sera imprimé.
+                            </span>
+                        </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="space-y-2">
@@ -116,7 +133,7 @@ export default function CalculationsTab({ initialOldStock, setInitialOldStock, a
                                 <Label htmlFor="oldStockInput">Stock Ancien (FCFA)</Label>
                                 <Input type="number" id="oldStockInput" value={oldStockInput} onChange={(e) => setOldStockInput(e.target.value)} placeholder="Valeur du stock ancien..." />
                             </div>
-                            <Button onClick={handleUpdateOldStock}><RefreshCw className="mr-2 h-4 w-4"/> Mettre à jour</Button>
+                            <Button onClick={handleUpdateOldStock} className="no-print"><RefreshCw className="mr-2 h-4 w-4"/> Mettre à jour</Button>
                         </div>
                         <div className="border-l-4 border-accent p-4 rounded-r-md bg-secondary/30 space-y-2">
                             <SummaryItem label="Stock Ancien" value={`${initialOldStock.toLocaleString()} FCFA`} />
@@ -151,7 +168,7 @@ export default function CalculationsTab({ initialOldStock, setInitialOldStock, a
                 <Card>
                     <CardHeader><CardTitle>Dépenses</CardTitle></CardHeader>
                     <CardContent>
-                        <div className="flex gap-2 mb-4">
+                        <div className="flex gap-2 mb-4 no-print">
                             <Input type="text" value={newExpenseMotif} onChange={e => setNewExpenseMotif(e.target.value)} placeholder="Motif de la dépense..." />
                             <Input type="number" value={newExpenseAmount} onChange={e => setNewExpenseAmount(e.target.value)} placeholder="Montant..." className="w-40" />
                             <Button onClick={addExpense}>Ajouter</Button>
@@ -161,7 +178,7 @@ export default function CalculationsTab({ initialOldStock, setInitialOldStock, a
                             {expenses.map(exp => (
                                 <div key={exp.id} className="flex justify-between items-center bg-secondary/50 p-2 rounded-md">
                                     <span>{exp.motif}: {exp.montant.toLocaleString()} FCFA</span>
-                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeExpense(exp.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 no-print" onClick={() => removeExpense(exp.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                                 </div>
                             ))}
                         </div>
@@ -184,7 +201,7 @@ export default function CalculationsTab({ initialOldStock, setInitialOldStock, a
                                 <Label htmlFor="especeGerant">Espèce disponible chez le gérant</Label>
                                 <Input type="number" id="especeGerant" value={especeGerant || ''} onChange={(e) => setEspeceGerant(Number(e.target.value))} placeholder="Entrez le montant..."/>
                             </div>
-                            <Button onClick={handleCalculateFinal}>Calculer</Button>
+                            <Button onClick={handleCalculateFinal} className="no-print">Calculer</Button>
                         </div>
                         {showFinalResult && (
                             <div className="mt-4 text-center p-4 rounded-md bg-secondary/30">
@@ -198,7 +215,7 @@ export default function CalculationsTab({ initialOldStock, setInitialOldStock, a
                             </div>
                         )}
                     </CardContent>
-                    <CardFooter className="flex justify-end gap-2">
+                    <CardFooter className="flex justify-end gap-2 no-print">
                         <Button onClick={handleSave}><Save className="mr-2 h-4 w-4" />Enregistrer les Résultats</Button>
                         <Button variant="outline" onClick={printReport}><Printer className="mr-2 h-4 w-4" />Imprimer le Rapport</Button>
                     </CardFooter>

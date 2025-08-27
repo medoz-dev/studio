@@ -83,18 +83,18 @@ export default function Home() {
           <p>Chargement des données sur les boissons...</p>
         ) : (
         <Tabs defaultValue="stock" className="w-full">
-          <TabsList className="grid w-full grid-cols-1 md:grid-cols-3">
+          <TabsList className="grid w-full grid-cols-1 md:grid-cols-3 no-print">
             <TabsTrigger value="stock">Stock Restant</TabsTrigger>
             <TabsTrigger value="arrival">Arrivage</TabsTrigger>
             <TabsTrigger value="calculations">Calculs Généraux</TabsTrigger>
           </TabsList>
-          <TabsContent value="stock">
+          <TabsContent value="stock" className="printable-area">
             <StockTab onStockUpdate={setStockTotal} boissons={boissons} />
           </TabsContent>
-          <TabsContent value="arrival">
+          <TabsContent value="arrival" className="printable-area">
             <ArrivalTab onArrivalUpdate={setArrivalTotal} boissons={boissons} />
           </TabsContent>
-          <TabsContent value="calculations">
+          <TabsContent value="calculations" className="printable-area">
             <CalculationsTab
               initialOldStock={oldStock}
               setInitialOldStock={setOldStock}
