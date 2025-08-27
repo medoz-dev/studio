@@ -31,11 +31,6 @@ export default function AdminPage() {
         setIsFormOpen(true);
     };
 
-    const handleDelete = (nom: string) => {
-        deleteBoisson(nom);
-        toast({ title: "Succès", description: "Boisson supprimée." });
-    };
-
     if (isLoading) {
         return <div className="container mx-auto p-8">Chargement de l'administration...</div>;
     }
@@ -107,7 +102,10 @@ export default function AdminPage() {
                                                         </AlertDialogHeader>
                                                         <AlertDialogFooter>
                                                             <AlertDialogCancel>Annuler</AlertDialogCancel>
-                                                            <AlertDialogAction onClick={() => handleDelete(boisson.nom)}>Supprimer</AlertDialogAction>
+                                                            <AlertDialogAction onClick={() => {
+                                                                deleteBoisson(boisson.nom);
+                                                                toast({ title: "Succès", description: "Boisson supprimée." });
+                                                            }}>Supprimer</AlertDialogAction>
                                                         </AlertDialogFooter>
                                                     </AlertDialogContent>
                                                 </AlertDialog>
