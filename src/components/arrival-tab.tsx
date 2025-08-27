@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 
 const ARRIVALS_STORAGE_KEY = 'allArrivalsData';
 
-interface ArrivalItem {
+export interface ArrivalItem {
   id: number;
   date: string;
   total: number;
@@ -27,7 +27,7 @@ interface ArrivalItem {
 }
 
 interface ArrivalTabProps {
-  onArrivalUpdate: (total: number) => void;
+  onArrivalUpdate: (total: number, details: ArrivalItem[]) => void;
   boissons: Boisson[];
 }
 
@@ -50,17 +50,16 @@ export default function ArrivalTab({ onArrivalUpdate, boissons }: ArrivalTabProp
   const saveAllArrivals = useCallback((arrivals: ArrivalItem[]) => {
     try {
       localStorage.setItem(ARRIVALS_STORAGE_KEY, JSON.stringify(arrivals));
-      toast({ title: "Succès", description: "La liste des arrivages a été mise à jour." });
     } catch (error) {
       console.error("Failed to save arrivals", error);
       toast({ title: "Erreur", description: "Impossible de sauvegarder les arrivages.", variant: "destructive" });
     }
   }, [toast]);
-
+  
   const totalArrivalValue = useMemo(() => {
-    const total = allArrivals.reduce((acc, arrival) => acc + arrival.total, 0);
-    onArrivalUpdate(total);
-    return total;
+      const total = allArrivals.reduce((acc, arrival) => acc + arrival.total, 0);
+      onArrivalUpdate(total, allArrivals);
+      return total;
   }, [allArrivals, onArrivalUpdate]);
 
   const handleAddArrival = (newArrival: Omit<ArrivalItem, 'id'>) => {
@@ -68,12 +67,14 @@ export default function ArrivalTab({ onArrivalUpdate, boissons }: ArrivalTabProp
     const updatedArrivals = [...allArrivals, arrivalWithId];
     setAllArrivals(updatedArrivals);
     saveAllArrivals(updatedArrivals);
+    toast({ title: "Succès", description: "La liste des arrivages a été mise à jour." });
   };
 
   const handleDeleteArrival = (id: number) => {
     const updatedArrivals = allArrivals.filter(arrival => arrival.id !== id);
     setAllArrivals(updatedArrivals);
     saveAllArrivals(updatedArrivals);
+    toast({ title: "Succès", description: "Arrivage supprimé." });
   };
 
   return (
@@ -318,5 +319,3 @@ function ArrivalDetailsDialog({ isOpen, setIsOpen, arrival }: ArrivalDetailsDial
     </Dialog>
   );
 }
-
-    

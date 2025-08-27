@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -10,15 +11,15 @@ import { type Boisson } from '@/lib/data';
 import { Printer, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-interface StockTabProps {
-  onStockUpdate: (total: number) => void;
-  boissons: Boisson[];
-}
-
-interface StockItem {
+export interface StockItem {
   boisson: Boisson;
   quantity: number;
   value: number;
+}
+
+interface StockTabProps {
+  onStockUpdate: (total: number, details: StockItem[]) => void;
+  boissons: Boisson[];
 }
 
 export default function StockTab({ onStockUpdate, boissons }: StockTabProps) {
@@ -45,8 +46,8 @@ export default function StockTab({ onStockUpdate, boissons }: StockTabProps) {
   }, [stockDetails]);
 
   useEffect(() => {
-    onStockUpdate(totalStockValue);
-  }, [totalStockValue, onStockUpdate]);
+    onStockUpdate(totalStockValue, stockDetails.filter(d => d.quantity > 0));
+  }, [totalStockValue, stockDetails, onStockUpdate]);
   
   const handleQuantityChange = (nom: string, value: string) => {
     const quantity = Number(value);
@@ -60,10 +61,12 @@ export default function StockTab({ onStockUpdate, boissons }: StockTabProps) {
       const stockData = {
         date: stockDate,
         total: totalStockValue,
-        details: stockDetails.map(item => ({
-          nom: item.boisson.nom,
-          quantite: item.quantity,
-          valeur: item.value
+        details: stockDetails
+          .filter(item => item.quantity > 0)
+          .map(item => ({
+            nom: item.boisson.nom,
+            quantite: item.quantity,
+            valeur: item.value
         }))
       };
       localStorage.setItem('currentStockDetails', JSON.stringify(stockData));

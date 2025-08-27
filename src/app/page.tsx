@@ -10,11 +10,18 @@ import CalculationsTab from "@/components/calculations-tab";
 import { useToast } from "@/hooks/use-toast";
 import { useBoissons } from "@/hooks/useBoissons";
 import { Button } from "@/components/ui/button";
-import { Settings } from "lucide-react";
+import { Settings, History } from "lucide-react";
+import type { StockItem } from "@/components/stock-tab";
+import type { ArrivalItem } from "@/components/arrival-tab";
+import type { Expense } from "@/components/calculations-tab";
+import type { CalculationData } from "@/lib/types";
+
 
 export default function Home() {
   const [stockTotal, setStockTotal] = useState(0);
+  const [stockDetails, setStockDetails] = useState<StockItem[]>([]);
   const [arrivalTotal, setArrivalTotal] = useState(0);
+  const [arrivalDetails, setArrivalDetails] = useState<ArrivalItem[]>([]);
   const [oldStock, setOldStock] = useState(0);
   const { toast } = useToast();
   const { boissons, isLoading } = useBoissons();
@@ -28,37 +35,56 @@ export default function Home() {
       }
       const allArrivals = localStorage.getItem("allArrivalsData");
       if (allArrivals) {
-        const parsedData = JSON.parse(allArrivals);
-        const total = parsedData.reduce((acc: number, arrival: { total: number }) => acc + arrival.total, 0);
+        const parsedArrivals: ArrivalItem[] = JSON.parse(allArrivals);
+        const total = parsedArrivals.reduce((acc, arrival) => acc + arrival.total, 0);
         setArrivalTotal(total);
+        setArrivalDetails(parsedArrivals);
       }
     } catch (error) {
       console.error("Failed to load data from localStorage", error);
     }
   }, []);
 
-  const handleSaveResults = (currentStockTotal: number, managerName: string) => {
+  const handleSaveResults = (calculationData: CalculationData, expenses: Expense[]) => {
     try {
-      const stockData = {
-          date: new Date().toISOString().split('T')[0],
-          total: currentStockTotal,
-          manager: managerName,
-      };
-      localStorage.setItem('stockData', JSON.stringify(stockData));
-      localStorage.removeItem('allArrivalsData'); // Clear arrivals after saving results
-      toast({
-        title: "Succès!",
-        description: `Résultats pour ${managerName} enregistrés! Le stock actuel est sauvegardé et les arrivages sont réinitialisés.`,
-      });
-      setOldStock(currentStockTotal);
-      setArrivalTotal(0); // Reset arrival total in state
+        const historyEntry = {
+            id: Date.now(),
+            ...calculationData,
+            stockDetails: stockDetails,
+            arrivalDetails: arrivalDetails,
+            expenseDetails: expenses,
+        };
+
+        const existingHistory = JSON.parse(localStorage.getItem('inventoryHistory') || '[]');
+        const newHistory = [historyEntry, ...existingHistory];
+        localStorage.setItem('inventoryHistory', JSON.stringify(newHistory));
+        
+        const stockData = {
+            date: new Date().toISOString().split('T')[0],
+            total: calculationData.currentStockTotal,
+            manager: calculationData.managerName,
+        };
+        localStorage.setItem('stockData', JSON.stringify(stockData));
+        localStorage.removeItem('allArrivalsData');
+        localStorage.removeItem('currentStockDetails');
+
+        toast({
+            title: "Succès!",
+            description: `Résultats pour ${calculationData.managerName} enregistrés dans l'historique!`,
+        });
+
+        // Reset state for next inventory
+        setOldStock(calculationData.currentStockTotal);
+        setArrivalTotal(0);
+        setArrivalDetails([]);
+
     } catch (error) {
-      console.error("Failed to save results to localStorage", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible d'enregistrer les résultats.",
-        variant: "destructive",
-      });
+        console.error("Failed to save results to localStorage", error);
+        toast({
+            title: "Erreur",
+            description: "Impossible d'enregistrer les résultats.",
+            variant: "destructive",
+        });
     }
   };
 
@@ -68,9 +94,15 @@ export default function Home() {
         <div className="container mx-auto py-6 text-center relative">
           <h1 className="text-4xl font-bold font-headline">Inventaire Pro</h1>
           <p className="text-lg mt-2">Système de Gestion d'Inventaire</p>
-           <div className="absolute top-1/2 -translate-y-1/2 right-4">
+           <div className="absolute top-1/2 -translate-y-1/2 right-4 flex gap-2">
+             <Link href="/history">
+                <Button variant="secondary" size="icon" title="Historique">
+                    <History />
+                    <span className="sr-only">Historique</span>
+                </Button>
+            </Link>
              <Link href="/admin">
-                <Button variant="secondary" size="icon">
+                <Button variant="secondary" size="icon" title="Administration">
                     <Settings />
                     <span className="sr-only">Administration</span>
                 </Button>
@@ -89,10 +121,10 @@ export default function Home() {
             <TabsTrigger value="calculations">Calculs Généraux</TabsTrigger>
           </TabsList>
           <TabsContent value="stock" className="printable-area">
-            <StockTab onStockUpdate={setStockTotal} boissons={boissons} />
+            <StockTab onStockUpdate={(total, details) => { setStockTotal(total); setStockDetails(details); }} boissons={boissons} />
           </TabsContent>
           <TabsContent value="arrival" className="printable-area">
-            <ArrivalTab onArrivalUpdate={setArrivalTotal} boissons={boissons} />
+            <ArrivalTab onArrivalUpdate={(total, details) => { setArrivalTotal(total); setArrivalDetails(details); }} boissons={boissons} />
           </TabsContent>
           <TabsContent value="calculations" className="printable-area">
             <CalculationsTab

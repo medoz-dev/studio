@@ -9,8 +9,9 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Trash2, Save, Printer, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import type { CalculationData } from '@/lib/types';
 
-interface Expense {
+export interface Expense {
     id: number;
     motif: string;
     montant: number;
@@ -21,7 +22,7 @@ interface CalculationsTabProps {
     setInitialOldStock: (value: number) => void;
     arrivalTotal: number;
     currentStockTotal: number;
-    onSaveResults: (currentStockTotal: number, managerName: string) => void;
+    onSaveResults: (calculationData: CalculationData, expenses: Expense[]) => void;
 }
 
 const SummaryItem = ({ label, value }: { label: string, value: string }) => (
@@ -48,10 +49,17 @@ export default function CalculationsTab({ initialOldStock, setInitialOldStock, a
         setOldStockInput(initialOldStock.toString());
     }, [initialOldStock]);
 
+    useEffect(() => {
+        // Reset calculation when totals change
+        setShowFinalResult(false);
+    }, [initialOldStock, arrivalTotal, currentStockTotal, encaissement, expenses, especeGerant]);
+
+
     const handleUpdateOldStock = () => {
         const newValue = Number(oldStockInput);
         if (!isNaN(newValue)) {
             setInitialOldStock(newValue);
+            toast({ title: "Succès", description: "Le stock ancien a été mis à jour." });
         }
     };
 
@@ -87,11 +95,33 @@ export default function CalculationsTab({ initialOldStock, setInitialOldStock, a
     };
 
     const handleSave = () => {
-        if (!managerName.trim()) {
-            toast({ title: "Attention", description: "Veuillez entrer le nom du gérant avant d'enregistrer.", variant: "destructive" });
+        if (!managerName.trim() || !showFinalResult) {
+            toast({ title: "Attention", description: "Veuillez d'abord entrer le nom du gérant et cliquer sur 'Calculer' avant d'enregistrer.", variant: "destructive" });
             return;
         }
-        onSaveResults(currentStockTotal, managerName);
+        const calculationData: CalculationData = {
+            date: calculationDate,
+            managerName,
+            oldStock: initialOldStock,
+            arrivalTotal,
+            generalStock,
+            currentStockTotal,
+            theoreticalSales,
+            encaissement,
+            reste,
+            totalExpenses,
+            finalReste,
+            especeGerant,
+            finalResult
+        };
+        onSaveResults(calculationData, expenses);
+
+        // Reset fields for next session, but keep old stock which is now the current stock
+        setManagerName('');
+        setEncaissement(0);
+        setExpenses([]);
+        setEspeceGerant(0);
+        setShowFinalResult(false);
     }
     
     const printReport = () => {
@@ -119,7 +149,7 @@ export default function CalculationsTab({ initialOldStock, setInitialOldStock, a
                             <span className="block text-xs text-red-500 italic print:hidden mt-2">
                                 <strong>Note:</strong> Seul cet onglet de calculs sera imprimé.<br />
                                 Lors de l'enregistrement en PDF, nommez le fichier comme ceci : <br/>
-                                <strong className="break-all">"Inventaire du 27/08/2025 pour (nom du gérant)"</strong>
+                                <strong className="break-all">"Inventaire du {formattedDate} pour {managerName || '(nom du gérant)'}"</strong>
                             </span>
                         </CardDescription>
                     </CardHeader>
