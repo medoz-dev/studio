@@ -125,6 +125,7 @@ export default function AdminPage() {
                 boisson={editingBoisson}
                 addBoisson={addBoisson}
                 updateBoisson={updateBoisson}
+                existingBoissons={boissons}
             />
         </>
     );
@@ -137,9 +138,10 @@ interface BoissonFormDialogProps {
     boisson: Boisson | null;
     addBoisson: (boisson: Boisson) => Promise<void>;
     updateBoisson: (nom: string, boisson: Boisson) => Promise<void>;
+    existingBoissons: Boisson[];
 }
 
-function BoissonFormDialog({ isOpen, setIsOpen, boisson, addBoisson, updateBoisson }: BoissonFormDialogProps) {
+function BoissonFormDialog({ isOpen, setIsOpen, boisson, addBoisson, updateBoisson, existingBoissons }: BoissonFormDialogProps) {
     const [formData, setFormData] = useState<Partial<Boisson>>({});
     const { toast } = useToast();
 
@@ -178,6 +180,11 @@ function BoissonFormDialog({ isOpen, setIsOpen, boisson, addBoisson, updateBoiss
             return;
         }
 
+        if (!boisson && existingBoissons.some(b => b.nom.toLowerCase() === nom.toLowerCase())) {
+            toast({ title: "Erreur", description: "Une boisson avec ce nom existe déjà.", variant: "destructive" });
+            return;
+        }
+
         const prix = Number(formData.prix);
         if (isNaN(prix) || prix < 0) {
             toast({ title: "Erreur", description: "Veuillez entrer un prix valide.", variant: "destructive" });
@@ -213,8 +220,8 @@ function BoissonFormDialog({ isOpen, setIsOpen, boisson, addBoisson, updateBoiss
                 toast({ title: "Succès", description: "Boisson ajoutée." });
             }
             setIsOpen(false);
-        } catch (error) {
-             toast({ title: "Erreur", description: "Une erreur est survenue.", variant: "destructive" });
+        } catch (error: any) {
+             toast({ title: "Erreur", description: error.message || "Une erreur est survenue lors de l'enregistrement.", variant: "destructive" });
         }
     };
 
