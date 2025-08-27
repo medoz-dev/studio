@@ -96,7 +96,7 @@ export default function HistoryPage() {
                                             <TableRow key={entry.id}>
                                                 <TableCell>{new Date(entry.date).toLocaleDateString('fr-FR')}</TableCell>
                                                 <TableCell className="font-medium">{entry.managerName}</TableCell>
-                                                <TableCell className={entry.finalResult > 0 ? 'text-green-600' : entry.finalResult < 0 ? 'text-red-600' : ''}>
+                                                <TableCell className={entry.finalResult > 0 ? 'text-green-600' : entry.finalResult < 0 ? 'text-destructive' : ''}>
                                                     {entry.finalResult > 0 ? `Surplus de ${entry.finalResult.toLocaleString()} FCFA` : entry.finalResult < 0 ? `Manquant de ${Math.abs(entry.finalResult).toLocaleString()} FCFA` : 'Bon'}
                                                 </TableCell>
                                                 <TableCell className="text-right">
@@ -170,7 +170,7 @@ function HistoryDetailsDialog({ isOpen, setIsOpen, entry }: { isOpen: boolean, s
                                 <SummaryItem label="Reste Final" value={`${entry.finalReste.toLocaleString()} FCFA`} />
                                 <SummaryItem label="Espèce disponible (gérant)" value={`${entry.especeGerant.toLocaleString()} FCFA`} />
                                 <Separator />
-                                 <div className={`text-xl font-bold mt-2 p-4 rounded-md text-center ${entry.finalResult > 0 ? 'bg-green-100 text-green-800' : entry.finalResult < 0 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}`}>
+                                 <div className={`text-xl font-bold mt-2 p-4 rounded-md text-center ${entry.finalResult > 0 ? 'bg-green-100 text-green-800' : entry.finalResult < 0 ? 'bg-red-100 text-red-800' : 'bg-secondary text-secondary-foreground'}`}>
                                     {entry.finalResult > 0 ? "SURPLUS" : entry.finalResult < 0 ? "MANQUANT" : "POINT BON"} : {Math.abs(entry.finalResult).toLocaleString()} FCFA
                                 </div>
                             </AccordionContent>

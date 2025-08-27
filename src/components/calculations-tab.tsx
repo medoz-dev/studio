@@ -240,7 +240,7 @@ export default function CalculationsTab({ initialOldStock, setInitialOldStock, a
                                 <p className="text-muted-foreground">
                                     {finalResult > 0 ? "Le gérant a un SURPLUS de:" : finalResult < 0 ? "Le gérant a un MANQUANT de:" : "Le point est BON. Le gérant a remis le montant exact."}
                                 </p>
-                                <div className={`text-3xl font-bold mt-2 ${finalResult > 0 ? 'text-green-600' : finalResult < 0 ? 'text-red-600' : 'text-primary'}`}>
+                                <div className={`text-3xl font-bold mt-2 ${finalResult > 0 ? 'text-green-600' : finalResult < 0 ? 'text-destructive' : 'text-primary'}`}>
                                     {Math.abs(finalResult).toLocaleString()} FCFA
                                 </div>
                             </div>
