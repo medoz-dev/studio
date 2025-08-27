@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { doc, getDoc, setDoc, onSnapshot, collection, query, orderBy, limit, deleteDoc, addDoc } from "firebase/firestore";
+import { doc, getDocs, setDoc, onSnapshot, collection, query, orderBy, limit, deleteDoc, addDoc, writeBatch } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -94,21 +94,26 @@ export default function Home() {
             expenseDetails: expenses,
         };
 
-        // Add to history collection
-        await addDoc(collection(db, 'users', user.uid, 'history'), historyEntry);
+        const batch = writeBatch(db);
 
-        // Clear current arrivals
+        // Add to history collection
+        const historyColRef = collection(db, 'users', user.uid, 'history');
+        const newHistoryDoc = doc(historyColRef);
+        batch.set(newHistoryDoc, historyEntry);
+
+        // Clear current arrivals by deleting all documents in the collection
         const arrivalsColRef = collection(db, 'users', user.uid, 'currentArrivals');
-        const arrivalsSnapshot = await getDoc(arrivalsColRef);
-        // Firebase does not support deleting a collection from the client.
-        // We delete documents one by one.
-        arrivalDetails.forEach(async (arrival) => {
-          await deleteDoc(doc(arrivalsColRef, arrival.id.toString()));
+        const arrivalsSnapshot = await getDocs(arrivalsColRef);
+        arrivalsSnapshot.forEach((doc) => {
+            batch.delete(doc.ref);
         });
         
         // Clear stock quantities
         const quantitiesDocRef = doc(db, 'users', user.uid, 'inventoryState', 'stockQuantities');
-        await setDoc(quantitiesDocRef, {});
+        batch.set(quantitiesDocRef, {});
+
+        // Commit all batched writes at once
+        await batch.commit();
 
         toast({
             title: "Succès!",
