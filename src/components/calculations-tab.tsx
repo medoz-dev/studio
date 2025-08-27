@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Trash2, Save, Printer, RefreshCw } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface Expense {
     id: number;
@@ -19,7 +20,7 @@ interface CalculationsTabProps {
     setInitialOldStock: (value: number) => void;
     arrivalTotal: number;
     currentStockTotal: number;
-    onSaveResults: (currentStockTotal: number) => void;
+    onSaveResults: (currentStockTotal: number, managerName: string) => void;
 }
 
 const SummaryItem = ({ label, value }: { label: string, value: string }) => (
@@ -31,6 +32,7 @@ const SummaryItem = ({ label, value }: { label: string, value: string }) => (
 
 export default function CalculationsTab({ initialOldStock, setInitialOldStock, arrivalTotal, currentStockTotal, onSaveResults }: CalculationsTabProps) {
     const [calculationDate, setCalculationDate] = useState(new Date().toISOString().split('T')[0]);
+    const [managerName, setManagerName] = useState('');
     const [oldStockInput, setOldStockInput] = useState(initialOldStock.toString());
     const [encaissement, setEncaissement] = useState(0);
     const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -38,6 +40,8 @@ export default function CalculationsTab({ initialOldStock, setInitialOldStock, a
     const [newExpenseAmount, setNewExpenseAmount] = useState('');
     const [especeGerant, setEspeceGerant] = useState(0);
     const [showFinalResult, setShowFinalResult] = useState(false);
+    const { toast } = useToast();
+
 
     useEffect(() => {
         setOldStockInput(initialOldStock.toString());
@@ -65,7 +69,7 @@ export default function CalculationsTab({ initialOldStock, setInitialOldStock, a
             setNewExpenseMotif('');
             setNewExpenseAmount('');
         } else {
-            alert('Veuillez entrer un motif et un montant valide.');
+            toast({ title: "Erreur", description: "Veuillez entrer un motif et un montant valide.", variant: "destructive" });
         }
     };
     
@@ -74,11 +78,19 @@ export default function CalculationsTab({ initialOldStock, setInitialOldStock, a
     };
 
     const handleCalculateFinal = () => {
+        if (!managerName.trim()) {
+            toast({ title: "Attention", description: "Veuillez entrer le nom du gérant avant de calculer.", variant: "destructive" });
+            return;
+        }
         setShowFinalResult(true);
     };
 
     const handleSave = () => {
-        onSaveResults(currentStockTotal);
+        if (!managerName.trim()) {
+            toast({ title: "Attention", description: "Veuillez entrer le nom du gérant avant d'enregistrer.", variant: "destructive" });
+            return;
+        }
+        onSaveResults(currentStockTotal, managerName);
     }
     
     const printReport = () => {
@@ -94,6 +106,11 @@ export default function CalculationsTab({ initialOldStock, setInitialOldStock, a
                         <CardDescription>Date du calcul: {new Date(calculationDate).toLocaleDateString('fr-FR')}</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                             <Label htmlFor="managerName">Nom du Gérant</Label>
+                             <Input id="managerName" value={managerName} onChange={(e) => setManagerName(e.target.value)} placeholder="Entrez le nom du gérant de caisse..." />
+                        </div>
+                        <Separator />
                         <div className="flex gap-2 items-end">
                             <div className="flex-grow">
                                 <Label htmlFor="oldStockInput">Stock Ancien (FCFA)</Label>
@@ -171,12 +188,12 @@ export default function CalculationsTab({ initialOldStock, setInitialOldStock, a
                         </div>
                         {showFinalResult && (
                             <div className="mt-4 text-center p-4 rounded-md bg-secondary/30">
-                                <h3 className="font-semibold text-lg">Résultat Final</h3>
+                                <h3 className="font-semibold text-lg">Résultat Final pour {managerName}</h3>
                                 <p className="text-muted-foreground">
                                     {finalResult > 0 ? "Le gérant a un SURPLUS de:" : finalResult < 0 ? "Le gérant a un MANQUANT de:" : "Le point est BON. Le gérant a remis le montant exact."}
                                 </p>
                                 <div className={`text-3xl font-bold mt-2 ${finalResult > 0 ? 'text-green-600' : finalResult < 0 ? 'text-red-600' : 'text-primary'}`}>
-                                    {finalResult.toLocaleString()} FCFA
+                                    {Math.abs(finalResult).toLocaleString()} FCFA
                                 </div>
                             </div>
                         )}

@@ -37,17 +37,18 @@ export default function Home() {
     }
   }, []);
 
-  const handleSaveResults = (currentStockTotal: number) => {
+  const handleSaveResults = (currentStockTotal: number, managerName: string) => {
     try {
       const stockData = {
           date: new Date().toISOString().split('T')[0],
           total: currentStockTotal,
+          manager: managerName,
       };
       localStorage.setItem('stockData', JSON.stringify(stockData));
       localStorage.removeItem('allArrivalsData'); // Clear arrivals after saving results
       toast({
         title: "Succès!",
-        description: "Résultats enregistrés! Le stock actuel est sauvegardé comme stock ancien et les arrivages ont été réinitialisés.",
+        description: `Résultats pour ${managerName} enregistrés! Le stock actuel est sauvegardé et les arrivages sont réinitialisés.`,
       });
       setOldStock(currentStockTotal);
       setArrivalTotal(0); // Reset arrival total in state
