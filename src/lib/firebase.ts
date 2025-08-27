@@ -7,15 +7,13 @@ import { getFirestore } from "firebase/firestore";
 // https://firebase.google.com/docs/web/setup#available-libraries
 
 // Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "REDACTED",
-  authDomain: "inventaire-pro-b3898.firebaseapp.com",
-  projectId: "inventaire-pro-b3898",
-  storageBucket: "inventaire-pro-b3898.appspot.com",
-  messagingSenderId: "1058292833073",
-  appId: "1:1058292833073:web:72304d2b3803020621379c",
-  measurementId: "G-5B331J9D33"
+    apiKey: "AIzaSyADSUgm3BFkJP8P6nUwzIAioFMyMUt-Ccg",
+    authDomain: "inventaire-pro.firebaseapp.com",
+    projectId: "inventaire-pro",
+    storageBucket: "inventaire-pro.appspot.com",
+    messagingSenderId: "876091676084",
+    appId: "1:876091676084:web:c3ab3e842278640c140ee1"
 };
 
 // Initialize Firebase
