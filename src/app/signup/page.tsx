@@ -5,7 +5,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { doc, setDoc } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -13,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 
 export default function SignupPage() {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -30,18 +32,41 @@ export default function SignupPage() {
       });
       return;
     }
-    setIsLoading(true);
-    try {
-      await createUserWithEmailAndPassword(auth, email, password);
-      toast({ title: "Succès", description: "Compte créé avec succès! Vous pouvez maintenant vous connecter." });
-      router.push('/login');
-    } catch (error: any) {
+    if (!name.trim()) {
       toast({
-        title: "Erreur d'inscription",
-        description: error.message,
+        title: "Erreur",
+        description: "Le nom du bar ou de l'établissement est requis.",
         variant: "destructive",
       });
-      setIsLoading(false);
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // Save user's name in Firestore
+      await setDoc(doc(db, 'users', user.uid), {
+        name: name,
+        email: email,
+      });
+
+      toast({ title: "Succès", description: "Compte créé! Vous pouvez maintenant vous connecter." });
+      router.push('/login');
+    } catch (error: any) {
+      let errorMessage = "Une erreur est survenue.";
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = "Cette adresse e-mail est déjà utilisée par un autre compte.";
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = "Le mot de passe doit comporter au moins 6 caractères.";
+      }
+      toast({
+        title: "Erreur d'inscription",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+        setIsLoading(false);
     }
   };
 
@@ -56,6 +81,17 @@ export default function SignupPage() {
         </CardHeader>
         <form onSubmit={handleSignup}>
           <CardContent className="grid gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">Nom du Bar / Établissement</Label>
+              <Input
+                id="name"
+                type="text"
+                placeholder="Ex: Le Bon Coin"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
               <Input

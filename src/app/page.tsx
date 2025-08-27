@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { doc, getDocs, setDoc, onSnapshot, collection, query, orderBy, limit, deleteDoc, addDoc, writeBatch } from "firebase/firestore";
+import { doc, getDocs, setDoc, onSnapshot, collection, query, orderBy, limit, deleteDoc, addDoc, writeBatch, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -31,9 +31,20 @@ export default function Home() {
   const { toast } = useToast();
   const { boissons, isLoading } = useBoissons();
   const { user } = useAuth();
+  const [userName, setUserName] = useState('');
+
 
   useEffect(() => {
     if (!user) return;
+
+    // Fetch user's name
+    const userDocRef = doc(db, 'users', user.uid);
+    getDoc(userDocRef).then(docSnap => {
+      if (docSnap.exists() && docSnap.data().name) {
+        setUserName(docSnap.data().name);
+      }
+    });
+
 
     // Listener for current stock quantities
     const quantitiesDocRef = doc(db, 'users', user.uid, 'inventoryState', 'stockQuantities');
@@ -140,7 +151,7 @@ export default function Home() {
       <header className="bg-primary text-primary-foreground shadow-md">
         <div className="container mx-auto py-6 text-center relative">
           <h1 className="text-4xl font-bold font-headline">Inventaire Pro</h1>
-          <p className="text-lg mt-2">Système de Gestion d'Inventaire</p>
+          <p className="text-lg mt-2">Bienvenue, {userName || user?.email}</p>
            <div className="absolute top-1/2 -translate-y-1/2 right-4 flex gap-2">
              <Link href="/history">
                 <Button variant="secondary" size="icon" title="Historique">
