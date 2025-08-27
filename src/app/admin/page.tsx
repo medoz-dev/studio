@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -102,8 +103,8 @@ export default function AdminPage() {
                                                         </AlertDialogHeader>
                                                         <AlertDialogFooter>
                                                             <AlertDialogCancel>Annuler</AlertDialogCancel>
-                                                            <AlertDialogAction onClick={() => {
-                                                                deleteBoisson(boisson.nom);
+                                                            <AlertDialogAction onClick={async () => {
+                                                                await deleteBoisson(boisson.nom);
                                                                 toast({ title: "Succès", description: "Boisson supprimée." });
                                                             }}>Supprimer</AlertDialogAction>
                                                         </AlertDialogFooter>
@@ -134,8 +135,8 @@ interface BoissonFormDialogProps {
     isOpen: boolean;
     setIsOpen: (open: boolean) => void;
     boisson: Boisson | null;
-    addBoisson: (boisson: Boisson) => void;
-    updateBoisson: (nom: string, boisson: Boisson) => void;
+    addBoisson: (boisson: Boisson) => Promise<void>;
+    updateBoisson: (nom: string, boisson: Boisson) => Promise<void>;
 }
 
 function BoissonFormDialog({ isOpen, setIsOpen, boisson, addBoisson, updateBoisson }: BoissonFormDialogProps) {
@@ -170,7 +171,7 @@ function BoissonFormDialog({ isOpen, setIsOpen, boisson, addBoisson, updateBoiss
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         const nom = formData.nom?.trim();
         if (!nom) {
             toast({ title: "Erreur", description: "Le nom de la boisson est requis.", variant: "destructive" });
@@ -203,14 +204,18 @@ function BoissonFormDialog({ isOpen, setIsOpen, boisson, addBoisson, updateBoiss
             specialUnit: Number(formData.specialUnit) || 0,
         };
 
-        if (boisson) {
-            updateBoisson(boisson.nom, finalBoisson);
-            toast({ title: "Succès", description: "Boisson mise à jour." });
-        } else {
-            addBoisson(finalBoisson);
-            toast({ title: "Succès", description: "Boisson ajoutée." });
+        try {
+            if (boisson) {
+                await updateBoisson(boisson.nom, finalBoisson);
+                toast({ title: "Succès", description: "Boisson mise à jour." });
+            } else {
+                await addBoisson(finalBoisson);
+                toast({ title: "Succès", description: "Boisson ajoutée." });
+            }
+            setIsOpen(false);
+        } catch (error) {
+             toast({ title: "Erreur", description: "Une erreur est survenue.", variant: "destructive" });
         }
-        setIsOpen(false);
     };
 
     return (

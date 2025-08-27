@@ -93,46 +93,6 @@ export default function StockTab({ onStockUpdate, boissons, stockQuantities, onQ
     }
   };
 
-  const saveStockData = () => {
-    try {
-      const allDetails = boissons.map(boisson => {
-          const quantity = stockQuantities[boisson.nom] || 0;
-          let value = 0;
-          if (boisson.special && boisson.specialUnit && boisson.specialPrice) {
-              const groups = Math.round((quantity / boisson.specialUnit) * 10) / 10;
-              value = Math.round(groups * boisson.specialPrice);
-          } else {
-              value = quantity * boisson.prix;
-          }
-          return { boisson, quantity, value };
-      });
-
-      const stockData = {
-        date: stockDate,
-        total: totalStockValue,
-        details: allDetails
-          .filter(item => item.quantity > 0)
-          .map(item => ({
-            nom: item.boisson.nom,
-            quantite: item.quantity,
-            valeur: item.value
-        }))
-      };
-      localStorage.setItem('currentStockDetails', JSON.stringify(stockData));
-      toast({
-        title: "Succès!",
-        description: "Stock restant enregistré localement!",
-      });
-    } catch (error) {
-      console.error("Failed to save stock data", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible d'enregistrer le stock.",
-        variant: "destructive"
-      });
-    }
-  };
-
   const printReport = () => {
     window.print();
   };
@@ -209,12 +169,11 @@ export default function StockTab({ onStockUpdate, boissons, stockQuantities, onQ
                 </div>
             </CardContent>
             <CardFooter className="flex justify-end gap-2">
-                <Button onClick={saveStockData}><Save className="mr-2 h-4 w-4" />Enregistrer le Stock</Button>
+                {/* Save button can be removed as data is saved on the fly */}
+                {/* <Button onClick={saveStockData}><Save className="mr-2 h-4 w-4" />Enregistrer le Stock</Button> */}
                 <Button variant="outline" onClick={printReport}><Printer className="mr-2 h-4 w-4" />Imprimer le Rapport</Button>
             </CardFooter>
         </Card>
     </div>
   );
 }
-
-    

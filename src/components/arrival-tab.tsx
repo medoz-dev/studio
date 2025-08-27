@@ -2,6 +2,9 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { collection, onSnapshot, addDoc, doc, deleteDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
@@ -13,10 +16,9 @@ import { Trash2, PlusCircle, Save, Eye, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
-const ARRIVALS_STORAGE_KEY = 'allArrivalsData';
 
 export interface ArrivalItem {
-  id: number;
+  id: string; // Firestore ID is a string
   date: string;
   total: number;
   details: {
@@ -35,45 +37,40 @@ export default function ArrivalTab({ onArrivalUpdate, boissons }: ArrivalTabProp
   const [allArrivals, setAllArrivals] = useState<ArrivalItem[]>([]);
   const [selectedArrival, setSelectedArrival] = useState<ArrivalItem | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
-    try {
-      const storedArrivals = localStorage.getItem(ARRIVALS_STORAGE_KEY);
-      if (storedArrivals) {
-        setAllArrivals(JSON.parse(storedArrivals));
-      }
-    } catch (error) {
-      console.error("Failed to load arrivals from localStorage", error);
-    }
-  }, []);
+    if (!user) {
+        setAllArrivals([]);
+        return;
+    };
 
-  const saveAllArrivals = useCallback((arrivals: ArrivalItem[]) => {
-    try {
-      localStorage.setItem(ARRIVALS_STORAGE_KEY, JSON.stringify(arrivals));
-    } catch (error) {
-      console.error("Failed to save arrivals", error);
-      toast({ title: "Erreur", description: "Impossible de sauvegarder les arrivages.", variant: "destructive" });
-    }
-  }, [toast]);
-  
+    const arrivalsColRef = collection(db, 'users', user.uid, 'currentArrivals');
+    const unsubscribe = onSnapshot(arrivalsColRef, (snapshot) => {
+      const arrivalsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ArrivalItem));
+      setAllArrivals(arrivalsData);
+    });
+    
+    return () => unsubscribe();
+  }, [user]);
+
   const totalArrivalValue = useMemo(() => {
       const total = allArrivals.reduce((acc, arrival) => acc + arrival.total, 0);
       onArrivalUpdate(total, allArrivals);
       return total;
   }, [allArrivals, onArrivalUpdate]);
 
-  const handleAddArrival = (newArrival: Omit<ArrivalItem, 'id'>) => {
-    const arrivalWithId = { ...newArrival, id: Date.now() };
-    const updatedArrivals = [...allArrivals, arrivalWithId];
-    setAllArrivals(updatedArrivals);
-    saveAllArrivals(updatedArrivals);
+  const handleAddArrival = async (newArrival: Omit<ArrivalItem, 'id'>) => {
+    if (!user) return;
+    const arrivalsColRef = collection(db, 'users', user.uid, 'currentArrivals');
+    await addDoc(arrivalsColRef, newArrival);
     toast({ title: "Succès", description: "La liste des arrivages a été mise à jour." });
   };
 
-  const handleDeleteArrival = (id: number) => {
-    const updatedArrivals = allArrivals.filter(arrival => arrival.id !== id);
-    setAllArrivals(updatedArrivals);
-    saveAllArrivals(updatedArrivals);
+  const handleDeleteArrival = async (id: string) => {
+    if (!user) return;
+    const arrivalDocRef = doc(db, 'users', user.uid, 'currentArrivals', id);
+    await deleteDoc(arrivalDocRef);
     toast({ title: "Succès", description: "Arrivage supprimé." });
   };
 
@@ -134,7 +131,7 @@ export default function ArrivalTab({ onArrivalUpdate, boissons }: ArrivalTabProp
 // Dialog Component for adding a new arrival
 interface NewArrivalDialogProps {
     boissons: Boisson[];
-    onAddArrival: (newArrival: Omit<ArrivalItem, 'id'>) => void;
+    onAddArrival: (newArrival: Omit<ArrivalItem, 'id'>) => Promise<void>;
 }
 
 function NewArrivalDialog({ boissons, onAddArrival }: NewArrivalDialogProps) {
@@ -142,6 +139,7 @@ function NewArrivalDialog({ boissons, onAddArrival }: NewArrivalDialogProps) {
     const [arrivalDate, setArrivalDate] = useState(new Date().toISOString().split('T')[0]);
     const [arrivalQuantities, setArrivalQuantities] = useState<Record<string, { quantity: number; caseSize?: number }>>({});
     const [searchTerm, setSearchTerm] = useState('');
+    const { toast } = useToast();
 
     const filteredBoissons = useMemo(() => {
         if (!searchTerm) {
@@ -184,12 +182,12 @@ function NewArrivalDialog({ boissons, onAddArrival }: NewArrivalDialogProps) {
         setArrivalQuantities(prev => ({ ...prev, [nom]: { ...prev[nom], caseSize } }));
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (arrivalDetails.length === 0) {
-            alert("Veuillez ajouter au moins une boisson à l'arrivage.");
+            toast({ title: "Erreur", description: "Veuillez ajouter au moins une boisson.", variant: "destructive" });
             return;
         }
-        onAddArrival({
+        await onAddArrival({
             date: arrivalDate,
             total: totalArrivalValue,
             details: arrivalDetails.map(item => ({
@@ -199,8 +197,8 @@ function NewArrivalDialog({ boissons, onAddArrival }: NewArrivalDialogProps) {
             }))
         });
         setIsOpen(false);
-        setArrivalQuantities({}); // Reset for next entry
-        setSearchTerm(''); // Reset search
+        setArrivalQuantities({});
+        setSearchTerm('');
     };
 
     return (
@@ -342,5 +340,3 @@ function ArrivalDetailsDialog({ isOpen, setIsOpen, arrival }: ArrivalDetailsDial
     </Dialog>
   );
 }
-
-    

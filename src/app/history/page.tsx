@@ -3,6 +3,9 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { collection, onSnapshot, query, orderBy, doc, deleteDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -23,18 +26,31 @@ const SummaryItem = ({ label, value, className = '' }: { label: string, value: s
 export default function HistoryPage() {
     const [history, setHistory] = useState<HistoryEntry[]>([]);
     const [selectedEntry, setSelectedEntry] = useState<HistoryEntry | null>(null);
+    const { user } = useAuth();
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const storedHistory = localStorage.getItem("inventoryHistory");
-        if (storedHistory) {
-            setHistory(JSON.parse(storedHistory));
-        }
-    }, []);
+        if (!user) {
+            setIsLoading(false);
+            return;
+        };
 
-    const handleDelete = (id: number) => {
-        const newHistory = history.filter(entry => entry.id !== id);
-        setHistory(newHistory);
-        localStorage.setItem("inventoryHistory", JSON.stringify(newHistory));
+        const historyColRef = collection(db, 'users', user.uid, 'history');
+        const q = query(historyColRef, orderBy('date', 'desc'));
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const historyData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as HistoryEntry));
+            setHistory(historyData);
+            setIsLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [user]);
+
+    const handleDelete = async (id: string) => {
+        if (!user) return;
+        const docRef = doc(db, 'users', user.uid, 'history', id);
+        await deleteDoc(docRef);
     };
     
     return (
@@ -60,7 +76,9 @@ export default function HistoryPage() {
                         <CardDescription>Liste de tous les inventaires finalisés et enregistrés.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {history.length === 0 ? (
+                        {isLoading ? (
+                            <p className="text-center text-muted-foreground py-12">Chargement de l'historique...</p>
+                        ) : history.length === 0 ? (
                             <p className="text-center text-muted-foreground py-12">Aucun historique trouvé.</p>
                         ) : (
                             <div className="border rounded-md">

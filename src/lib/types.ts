@@ -20,7 +20,7 @@ export interface CalculationData {
 }
   
 export interface HistoryEntry extends CalculationData {
-    id: number;
+    id: string; // Firestore ID is a string
     stockDetails: StockItem[];
     arrivalDetails: ArrivalItem[];
     expenseDetails: Expense[];

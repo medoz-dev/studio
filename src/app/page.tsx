@@ -1,8 +1,11 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { doc, getDoc, setDoc, onSnapshot, collection, query, orderBy, limit, deleteDoc, addDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useAuth } from "@/context/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import StockTab from "@/components/stock-tab";
 import ArrivalTab from "@/components/arrival-tab";
@@ -10,11 +13,12 @@ import CalculationsTab from "@/components/calculations-tab";
 import { useToast } from "@/hooks/use-toast";
 import { useBoissons } from "@/hooks/useBoissons";
 import { Button } from "@/components/ui/button";
-import { Settings, History } from "lucide-react";
+import { Settings, History, LogOut } from "lucide-react";
+import { auth } from '@/lib/firebase';
 import type { StockItem } from "@/components/stock-tab";
 import type { ArrivalItem } from "@/components/arrival-tab";
 import type { Expense } from "@/components/calculations-tab";
-import type { CalculationData } from "@/lib/types";
+import type { CalculationData, HistoryEntry } from "@/lib/types";
 
 
 export default function Home() {
@@ -26,73 +30,94 @@ export default function Home() {
   const [stockQuantities, setStockQuantities] = useState<Record<string, number>>({});
   const { toast } = useToast();
   const { boissons, isLoading } = useBoissons();
+  const { user } = useAuth();
 
   useEffect(() => {
-    try {
-      const previousStockData = localStorage.getItem("stockData");
-      if (previousStockData) {
-        const parsedData = JSON.parse(previousStockData);
-        setOldStock(parsedData.total || 0);
+    if (!user) return;
+
+    // Listener for current stock quantities
+    const quantitiesDocRef = doc(db, 'users', user.uid, 'inventoryState', 'stockQuantities');
+    const unsubQuantities = onSnapshot(quantitiesDocRef, (doc) => {
+      if (doc.exists()) {
+        setStockQuantities(doc.data() || {});
       }
-      const allArrivals = localStorage.getItem("allArrivalsData");
-      if (allArrivals) {
-        const parsedArrivals: ArrivalItem[] = JSON.parse(allArrivals);
-        const total = parsedArrivals.reduce((acc, arrival) => acc + arrival.total, 0);
-        setArrivalTotal(total);
-        setArrivalDetails(parsedArrivals);
-      }
-      const currentStockQuantities = localStorage.getItem('currentStockQuantities');
-      if (currentStockQuantities) {
-        setStockQuantities(JSON.parse(currentStockQuantities));
-      }
-    } catch (error) {
-      console.error("Failed to load data from localStorage", error);
+    });
+
+    // Listener for all arrivals
+    const arrivalsColRef = collection(db, 'users', user.uid, 'currentArrivals');
+    const unsubArrivals = onSnapshot(arrivalsColRef, (snapshot) => {
+      const arrivalsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ArrivalItem));
+      const total = arrivalsData.reduce((acc, arrival) => acc + arrival.total, 0);
+      setArrivalTotal(total);
+      setArrivalDetails(arrivalsData);
+    });
+    
+    // Get latest stock value from history to set as oldStock
+    const historyColRef = collection(db, 'users', user.uid, 'history');
+    const q = query(historyColRef, orderBy('date', 'desc'), limit(1));
+    const unsubHistory = onSnapshot(q, (snapshot) => {
+        if (!snapshot.empty) {
+            const lastEntry = snapshot.docs[0].data() as HistoryEntry;
+            setOldStock(lastEntry.currentStockTotal || 0);
+        } else {
+            setOldStock(0);
+        }
+    });
+
+
+    return () => {
+      unsubQuantities();
+      unsubArrivals();
+      unsubHistory();
+    };
+  }, [user]);
+
+  const handleStockQuantitiesChange = useCallback(async (quantities: Record<string, number>) => {
+    setStockQuantities(quantities);
+    if (user) {
+      const docRef = doc(db, 'users', user.uid, 'inventoryState', 'stockQuantities');
+      await setDoc(docRef, quantities, { merge: true });
     }
-  }, []);
-
-  const handleStockQuantitiesChange = (quantities: Record<string, number>) => {
-      setStockQuantities(quantities);
-      localStorage.setItem('currentStockQuantities', JSON.stringify(quantities));
-  };
+  }, [user]);
 
 
-  const handleSaveResults = (calculationData: CalculationData, expenses: Expense[]) => {
+  const handleSaveResults = async (calculationData: CalculationData, expenses: Expense[]) => {
+    if (!user) {
+      toast({ title: "Erreur", description: "Vous devez être connecté.", variant: "destructive" });
+      return;
+    }
     try {
-        const historyEntry = {
-            id: Date.now(),
+        const historyEntry: Omit<HistoryEntry, 'id'> = {
             ...calculationData,
             stockDetails: stockDetails,
             arrivalDetails: arrivalDetails,
             expenseDetails: expenses,
         };
 
-        const existingHistory = JSON.parse(localStorage.getItem('inventoryHistory') || '[]');
-        const newHistory = [historyEntry, ...existingHistory];
-        localStorage.setItem('inventoryHistory', JSON.stringify(newHistory));
+        // Add to history collection
+        await addDoc(collection(db, 'users', user.uid, 'history'), historyEntry);
+
+        // Clear current arrivals
+        const arrivalsColRef = collection(db, 'users', user.uid, 'currentArrivals');
+        const arrivalsSnapshot = await getDoc(arrivalsColRef);
+        // Firebase does not support deleting a collection from the client.
+        // We delete documents one by one.
+        arrivalDetails.forEach(async (arrival) => {
+          await deleteDoc(doc(arrivalsColRef, arrival.id.toString()));
+        });
         
-        const stockData = {
-            date: new Date().toISOString().split('T')[0],
-            total: calculationData.currentStockTotal,
-            manager: calculationData.managerName,
-        };
-        localStorage.setItem('stockData', JSON.stringify(stockData));
-        localStorage.removeItem('allArrivalsData');
-        localStorage.removeItem('currentStockDetails');
-        localStorage.removeItem('currentStockQuantities');
+        // Clear stock quantities
+        const quantitiesDocRef = doc(db, 'users', user.uid, 'inventoryState', 'stockQuantities');
+        await setDoc(quantitiesDocRef, {});
 
         toast({
             title: "Succès!",
             description: `Résultats pour ${calculationData.managerName} enregistrés dans l'historique!`,
         });
 
-        // Reset state for next inventory
-        setOldStock(calculationData.currentStockTotal);
-        setArrivalTotal(0);
-        setArrivalDetails([]);
-        setStockQuantities({});
-
+        // State will be reset by listeners
     } catch (error) {
-        console.error("Failed to save results to localStorage", error);
+        console.error("Failed to save results to Firestore", error);
         toast({
             title: "Erreur",
             description: "Impossible d'enregistrer les résultats.",
@@ -100,6 +125,10 @@ export default function Home() {
         });
     }
   };
+  
+  const handleLogout = async () => {
+    await auth.signOut();
+  }
 
   return (
     <>
@@ -120,6 +149,10 @@ export default function Home() {
                     <span className="sr-only">Administration</span>
                 </Button>
             </Link>
+            <Button variant="destructive" size="icon" title="Déconnexion" onClick={handleLogout}>
+                <LogOut />
+                <span className="sr-only">Déconnexion</span>
+            </Button>
            </div>
         </div>
       </header>
