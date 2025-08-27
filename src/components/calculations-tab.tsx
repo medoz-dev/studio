@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -108,6 +109,9 @@ export default function CalculationsTab({ initialOldStock, setInitialOldStock, a
         window.print();
         document.title = originalTitle;
     }
+
+    const formattedDate = new Date(calculationDate).toLocaleDateString('fr-FR');
+    const suggestedFileName = `Inventaire du ${formattedDate} pour ${managerName || 'gérant'}`;
     
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -116,9 +120,11 @@ export default function CalculationsTab({ initialOldStock, setInitialOldStock, a
                     <CardHeader>
                         <CardTitle>Résumé des données</CardTitle>
                         <CardDescription>
-                            Date du calcul: {new Date(calculationDate).toLocaleDateString('fr-FR')}
-                            <span className="block text-xs text-red-500 italic print:hidden">
-                                Note: Seul cet onglet de calculs sera imprimé.
+                            Date du calcul: {formattedDate}
+                            <span className="block text-xs text-red-500 italic print:hidden mt-2">
+                                <strong>Note:</strong> Seul cet onglet de calculs sera imprimé.<br />
+                                Lors de l'enregistrement en PDF, nommez le fichier: <br/>
+                                <strong className="break-all">"{suggestedFileName}"</strong>
                             </span>
                         </CardDescription>
                     </CardHeader>
