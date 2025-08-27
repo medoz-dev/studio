@@ -1,19 +1,23 @@
+
 "use client";
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [resetEmail, setResetEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
@@ -28,10 +32,34 @@ export default function LoginPage() {
     } catch (error: any) {
       toast({
         title: "Erreur de connexion",
-        description: error.message,
+        description: "Email ou mot de passe incorrect.",
         variant: "destructive",
       });
       setIsLoading(false);
+    }
+  };
+
+  const handlePasswordReset = async () => {
+    if (!resetEmail) {
+        toast({
+            title: "Erreur",
+            description: "Veuillez entrer votre adresse e-mail.",
+            variant: "destructive",
+        });
+        return;
+    }
+    try {
+        await sendPasswordResetEmail(auth, resetEmail);
+        toast({
+            title: "Succès",
+            description: "Un e-mail de réinitialisation a été envoyé à votre adresse.",
+        });
+    } catch (error: any) {
+        toast({
+            title: "Erreur",
+            description: "Impossible d'envoyer l'e-mail. Vérifiez l'adresse.",
+            variant: "destructive",
+        });
     }
   };
 
@@ -66,6 +94,35 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
+               <div className="text-right text-sm">
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <button type="button" className="underline font-semibold text-primary">Mot de passe oublié ?</button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Réinitialiser le mot de passe</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Entrez votre adresse e-mail ci-dessous. Nous vous enverrons un lien pour réinitialiser votre mot de passe.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <div className="grid gap-2">
+                        <Label htmlFor="reset-email" className="sr-only">Email</Label>
+                        <Input
+                            id="reset-email"
+                            type="email"
+                            placeholder="m@exemple.com"
+                            value={resetEmail}
+                            onChange={(e) => setResetEmail(e.target.value)}
+                        />
+                    </div>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Annuler</AlertDialogCancel>
+                      <AlertDialogAction onClick={handlePasswordReset}>Envoyer</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
