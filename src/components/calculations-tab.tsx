@@ -111,7 +111,7 @@ export default function CalculationsTab({ initialOldStock, setInitialOldStock, a
     }
 
     const formattedDate = new Date(calculationDate).toLocaleDateString('fr-FR');
-    const suggestedFileName = `Inventaire du ${formattedDate} pour ${managerName || 'gérant'}`;
+    const suggestedFileName = `Inventaire du ${formattedDate} pour ${managerName || '(nom du gérant)'}`;
     
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -123,7 +123,7 @@ export default function CalculationsTab({ initialOldStock, setInitialOldStock, a
                             Date du calcul: {formattedDate}
                             <span className="block text-xs text-red-500 italic print:hidden mt-2">
                                 <strong>Note:</strong> Seul cet onglet de calculs sera imprimé.<br />
-                                Lors de l'enregistrement en PDF, nommez le fichier: <br/>
+                                Lors de l'enregistrement en PDF, nommez le fichier comme ceci : <br/>
                                 <strong className="break-all">"{suggestedFileName}"</strong>
                             </span>
                         </CardDescription>
