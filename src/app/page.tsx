@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -25,10 +26,11 @@ export default function Home() {
         const parsedData = JSON.parse(previousStockData);
         setOldStock(parsedData.total || 0);
       }
-      const previousArrivalData = localStorage.getItem("arrivalData");
-      if (previousArrivalData) {
-        const parsedData = JSON.parse(previousArrivalData);
-        setArrivalTotal(parsedData.total || 0);
+      const allArrivals = localStorage.getItem("allArrivalsData");
+      if (allArrivals) {
+        const parsedData = JSON.parse(allArrivals);
+        const total = parsedData.reduce((acc: number, arrival: { total: number }) => acc + arrival.total, 0);
+        setArrivalTotal(total);
       }
     } catch (error) {
       console.error("Failed to load data from localStorage", error);
@@ -42,11 +44,13 @@ export default function Home() {
           total: currentStockTotal,
       };
       localStorage.setItem('stockData', JSON.stringify(stockData));
+      localStorage.removeItem('allArrivalsData'); // Clear arrivals after saving results
       toast({
         title: "Succès!",
-        description: "Résultats enregistrés! Le stock actuel est sauvegardé comme stock ancien.",
+        description: "Résultats enregistrés! Le stock actuel est sauvegardé comme stock ancien et les arrivages ont été réinitialisés.",
       });
       setOldStock(currentStockTotal);
+      setArrivalTotal(0); // Reset arrival total in state
     } catch (error) {
       console.error("Failed to save results to localStorage", error);
       toast({
