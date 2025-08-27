@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { type Boisson } from '@/lib/data';
-import { Trash2, PlusCircle, Save } from 'lucide-react';
+import { Trash2, PlusCircle, Save, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
@@ -33,6 +33,7 @@ interface ArrivalTabProps {
 
 export default function ArrivalTab({ onArrivalUpdate, boissons }: ArrivalTabProps) {
   const [allArrivals, setAllArrivals] = useState<ArrivalItem[]>([]);
+  const [selectedArrival, setSelectedArrival] = useState<ArrivalItem | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -76,44 +77,56 @@ export default function ArrivalTab({ onArrivalUpdate, boissons }: ArrivalTabProp
   };
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-                <CardTitle>Liste des Arrivages</CardTitle>
-                <CardDescription>Ajoutez et suivez tous les arrivages de stock.</CardDescription>
-            </div>
-            <NewArrivalDialog boissons={boissons} onAddArrival={handleAddArrival} />
-        </CardHeader>
-        <CardContent>
-          {allArrivals.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">Aucun arrivage enregistré pour le moment.</p>
-          ) : (
-            <div className="space-y-4">
-              {allArrivals.map(arrival => (
-                <Card key={arrival.id} className="bg-secondary/30">
-                  <CardHeader>
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <CardTitle className="text-lg">Arrivage du {new Date(arrival.date).toLocaleDateString('fr-FR')}</CardTitle>
-                        <CardDescription>Total: {arrival.total.toLocaleString()} FCFA</CardDescription>
+    <>
+      <div className="space-y-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                  <CardTitle>Liste des Arrivages</CardTitle>
+                  <CardDescription>Ajoutez et suivez tous les arrivages de stock.</CardDescription>
+              </div>
+              <NewArrivalDialog boissons={boissons} onAddArrival={handleAddArrival} />
+          </CardHeader>
+          <CardContent>
+            {allArrivals.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">Aucun arrivage enregistré pour le moment.</p>
+            ) : (
+              <div className="space-y-4">
+                {allArrivals.map(arrival => (
+                  <Card key={arrival.id} className="bg-secondary/30">
+                    <CardHeader>
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <CardTitle className="text-lg">Arrivage du {new Date(arrival.date).toLocaleDateString('fr-FR')}</CardTitle>
+                          <CardDescription>Total: {arrival.total.toLocaleString()} FCFA</CardDescription>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button variant="outline" size="sm" onClick={() => setSelectedArrival(arrival)}>
+                              <Eye className="mr-2 h-4 w-4" /> Voir les détails
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteArrival(arrival.id)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
                       </div>
-                      <Button variant="ghost" size="icon" onClick={() => handleDeleteArrival(arrival.id)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </CardHeader>
-                </Card>
-              ))}
-            </div>
-          )}
-        </CardContent>
-        <CardFooter className="flex justify-end items-center gap-4 font-bold text-lg border-t pt-6 mt-6">
-            <span>Total de tous les arrivages:</span>
-            <span>{totalArrivalValue.toLocaleString()} FCFA</span>
-        </CardFooter>
-      </Card>
-    </div>
+                    </CardHeader>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+          <CardFooter className="flex justify-end items-center gap-4 font-bold text-lg border-t pt-6 mt-6">
+              <span>Total de tous les arrivages:</span>
+              <span>{totalArrivalValue.toLocaleString()} FCFA</span>
+          </CardFooter>
+        </Card>
+      </div>
+      <ArrivalDetailsDialog
+        isOpen={!!selectedArrival}
+        setIsOpen={() => setSelectedArrival(null)}
+        arrival={selectedArrival}
+      />
+    </>
   );
 }
 
@@ -256,3 +269,54 @@ function NewArrivalDialog({ boissons, onAddArrival }: NewArrivalDialogProps) {
         </Dialog>
     );
 }
+
+
+// Dialog Component for showing arrival details
+interface ArrivalDetailsDialogProps {
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
+  arrival: ArrivalItem | null;
+}
+
+function ArrivalDetailsDialog({ isOpen, setIsOpen, arrival }: ArrivalDetailsDialogProps) {
+  if (!arrival) return null;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Détails de l'arrivage du {new Date(arrival.date).toLocaleDateString('fr-FR')}</DialogTitle>
+          <DialogDescription>
+            Voici le résumé des boissons reçues pour cet arrivage.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="max-h-[60vh] overflow-y-auto pr-4">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Boisson</TableHead>
+                <TableHead>Quantité</TableHead>
+                <TableHead className="text-right">Valeur</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {arrival.details.map((item, index) => (
+                <TableRow key={index}>
+                  <TableCell className="font-medium">{item.nom}</TableCell>
+                  <TableCell>{item.quantite}</TableCell>
+                  <TableCell className="text-right">{item.valeur.toLocaleString()} FCFA</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+        <DialogFooter className="border-t pt-4 flex justify-between sm:justify-between items-center">
+            <div className="font-bold text-lg">Total: {arrival.total.toLocaleString()} FCFA</div>
+            <Button variant="outline" onClick={() => setIsOpen(false)}>Fermer</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+    
