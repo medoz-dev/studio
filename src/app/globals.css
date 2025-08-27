@@ -89,20 +89,22 @@ body {
 
 @media print {
   body {
-    background-color: white;
+    background-color: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
   header, .no-print {
-    display: none;
+    display: none !important;
   }
   main {
-    padding: 0;
-    margin: 0;
+    padding: 0 !important;
+    margin: 0 !important;
   }
   .printable-area {
     display: block !important;
   }
   .printable-area .card {
-    box-shadow: none;
-    border: 1px solid #ccc;
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
   }
 }
