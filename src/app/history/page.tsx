@@ -233,5 +233,3 @@ function HistoryDetailsDialog({ isOpen, setIsOpen, entry }: { isOpen: boolean, s
         </Dialog>
     );
 }
-
-    
