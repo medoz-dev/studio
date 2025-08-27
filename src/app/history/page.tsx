@@ -11,6 +11,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { ArrowLeft, Eye, Trash2 } from "lucide-react";
 import { HistoryEntry } from "@/lib/types";
 import { Separator } from "@/components/ui/separator";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 const SummaryItem = ({ label, value, className = '' }: { label: string, value: string, className?: string }) => (
     <div className={`flex justify-between items-center py-2 ${className}`}>
@@ -31,11 +32,9 @@ export default function HistoryPage() {
     }, []);
 
     const handleDelete = (id: number) => {
-        if (window.confirm("Êtes-vous sûr de vouloir supprimer cet enregistrement de l'historique ? Cette action est irréversible.")) {
-            const newHistory = history.filter(entry => entry.id !== id);
-            setHistory(newHistory);
-            localStorage.setItem("inventoryHistory", JSON.stringify(newHistory));
-        }
+        const newHistory = history.filter(entry => entry.id !== id);
+        setHistory(newHistory);
+        localStorage.setItem("inventoryHistory", JSON.stringify(newHistory));
     };
     
     return (
@@ -86,9 +85,25 @@ export default function HistoryPage() {
                                                     <Button variant="outline" size="sm" onClick={() => setSelectedEntry(entry)}>
                                                         <Eye className="mr-2 h-4 w-4" /> Détails
                                                     </Button>
-                                                     <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDelete(entry.id)}>
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
+                                                    <AlertDialog>
+                                                        <AlertDialogTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </AlertDialogTrigger>
+                                                        <AlertDialogContent>
+                                                            <AlertDialogHeader>
+                                                                <AlertDialogTitle>Êtes-vous sûr?</AlertDialogTitle>
+                                                                <AlertDialogDescription>
+                                                                    Cette action est irréversible et supprimera définitivement cet enregistrement de l'historique.
+                                                                </AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                                                <AlertDialogAction onClick={() => handleDelete(entry.id)}>Supprimer</AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
                                                 </TableCell>
                                             </TableRow>
                                         ))}
@@ -219,3 +234,4 @@ function HistoryDetailsDialog({ isOpen, setIsOpen, entry }: { isOpen: boolean, s
     );
 }
 
+    
