@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { type Boisson } from '@/lib/data';
-import { Printer, Save } from 'lucide-react';
+import { Printer, Save, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export interface StockItem {
@@ -26,10 +26,20 @@ interface StockTabProps {
 
 export default function StockTab({ onStockUpdate, boissons, stockQuantities, onQuantityChange }: StockTabProps) {
   const [stockDate, setStockDate] = useState(new Date().toISOString().split('T')[0]);
+  const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
 
+  const filteredBoissons = useMemo(() => {
+    if (!searchTerm) {
+      return boissons;
+    }
+    return boissons.filter(b =>
+      b.nom.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [searchTerm, boissons]);
+
   const stockDetails: StockItem[] = useMemo(() => {
-    return boissons.map(boisson => {
+    return filteredBoissons.map(boisson => {
       const quantity = stockQuantities[boisson.nom] || 0;
       let value = 0;
       if (boisson.special && boisson.specialUnit && boisson.specialPrice) {
@@ -40,15 +50,40 @@ export default function StockTab({ onStockUpdate, boissons, stockQuantities, onQ
       }
       return { boisson, quantity, value };
     });
-  }, [stockQuantities, boissons]);
+  }, [stockQuantities, filteredBoissons]);
 
   const totalStockValue = useMemo(() => {
-    return stockDetails.reduce((acc, item) => acc + item.value, 0);
-  }, [stockDetails]);
+    // We calculate total based on ALL quantities, not just filtered ones
+    return boissons.reduce((acc, boisson) => {
+        const quantity = stockQuantities[boisson.nom] || 0;
+        let value = 0;
+        if (boisson.special && boisson.specialUnit && boisson.specialPrice) {
+            const groups = Math.round((quantity / boisson.specialUnit) * 10) / 10;
+            value = Math.round(groups * boisson.specialPrice);
+        } else {
+            value = quantity * boisson.prix;
+        }
+        return acc + value;
+    }, 0);
+  }, [stockQuantities, boissons]);
 
   useEffect(() => {
-    onStockUpdate(totalStockValue, stockDetails.filter(d => d.quantity > 0));
-  }, [totalStockValue, stockDetails, onStockUpdate]);
+    const allStockDetails = boissons
+      .map(boisson => {
+        const quantity = stockQuantities[boisson.nom] || 0;
+        let value = 0;
+        if (boisson.special && boisson.specialUnit && boisson.specialPrice) {
+          const groups = Math.round((quantity / boisson.specialUnit) * 10) / 10;
+          value = Math.round(groups * boisson.specialPrice);
+        } else {
+          value = quantity * boisson.prix;
+        }
+        return { boisson, quantity, value };
+      })
+      .filter(d => d.quantity > 0);
+
+    onStockUpdate(totalStockValue, allStockDetails);
+  }, [totalStockValue, stockQuantities, boissons, onStockUpdate]);
   
   const handleQuantityChange = (nom: string, value: string) => {
     const quantity = Number(value);
@@ -60,10 +95,22 @@ export default function StockTab({ onStockUpdate, boissons, stockQuantities, onQ
 
   const saveStockData = () => {
     try {
+      const allDetails = boissons.map(boisson => {
+          const quantity = stockQuantities[boisson.nom] || 0;
+          let value = 0;
+          if (boisson.special && boisson.specialUnit && boisson.specialPrice) {
+              const groups = Math.round((quantity / boisson.specialUnit) * 10) / 10;
+              value = Math.round(groups * boisson.specialPrice);
+          } else {
+              value = quantity * boisson.prix;
+          }
+          return { boisson, quantity, value };
+      });
+
       const stockData = {
         date: stockDate,
         total: totalStockValue,
-        details: stockDetails
+        details: allDetails
           .filter(item => item.quantity > 0)
           .map(item => ({
             nom: item.boisson.nom,
@@ -100,9 +147,21 @@ export default function StockTab({ onStockUpdate, boissons, stockQuantities, onQ
                 <div className="bg-primary/5 border-l-4 border-accent text-primary/80 p-4 mb-6 rounded-md" role="alert">
                     <p>Veuillez entrer le nombre de boissons restantes en stock pour chaque type. Le système calculera automatiquement la valeur totale du stock.</p>
                 </div>
-                <div className="max-w-sm">
-                    <Label htmlFor="stockDate">Date d'inventaire:</Label>
-                    <Input type="date" id="stockDate" value={stockDate} onChange={(e) => setStockDate(e.target.value)} />
+                 <div className="flex justify-between items-end gap-4">
+                    <div className="max-w-sm">
+                        <Label htmlFor="stockDate">Date d'inventaire:</Label>
+                        <Input type="date" id="stockDate" value={stockDate} onChange={(e) => setStockDate(e.target.value)} />
+                    </div>
+                     <div className="relative w-full max-w-xs">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <Input
+                            type="text"
+                            placeholder="Rechercher une boisson..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-10"
+                        />
+                    </div>
                 </div>
             </CardContent>
         </Card>
@@ -116,7 +175,7 @@ export default function StockTab({ onStockUpdate, boissons, stockQuantities, onQ
                               <TableHead>Boisson</TableHead>
                               <TableHead>Prix Unitaire</TableHead>
                               <TableHead className="w-32">Nombre</TableHead>
-                              <TableHead className="text-right">Valeur</TableHead>
+                              <TableHead className="text-right">Valeur (filtrée)</TableHead>
                           </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -142,7 +201,7 @@ export default function StockTab({ onStockUpdate, boissons, stockQuantities, onQ
                       </TableBody>
                       <TableFoot>
                           <TableRow>
-                              <TableCell colSpan={3} className="font-bold text-lg">Total</TableCell>
+                              <TableCell colSpan={3} className="font-bold text-lg">Total Général</TableCell>
                               <td className="text-right font-bold text-lg whitespace-nowrap">{totalStockValue.toLocaleString()} FCFA</td>
                           </TableRow>
                       </TableFoot>
@@ -157,3 +216,5 @@ export default function StockTab({ onStockUpdate, boissons, stockQuantities, onQ
     </div>
   );
 }
+
+    

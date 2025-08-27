@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { type Boisson } from '@/lib/data';
-import { Trash2, PlusCircle, Save, Eye } from 'lucide-react';
+import { Trash2, PlusCircle, Save, Eye, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
@@ -141,7 +141,17 @@ function NewArrivalDialog({ boissons, onAddArrival }: NewArrivalDialogProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [arrivalDate, setArrivalDate] = useState(new Date().toISOString().split('T')[0]);
     const [arrivalQuantities, setArrivalQuantities] = useState<Record<string, { quantity: number; caseSize?: number }>>({});
-    
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const filteredBoissons = useMemo(() => {
+        if (!searchTerm) {
+          return boissons;
+        }
+        return boissons.filter(b =>
+          b.nom.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [searchTerm, boissons]);
+
     const arrivalDetails = useMemo(() => {
         return boissons.map(boisson => {
             const { quantity = 0, caseSize } = arrivalQuantities[boisson.nom] || {};
@@ -190,6 +200,7 @@ function NewArrivalDialog({ boissons, onAddArrival }: NewArrivalDialogProps) {
         });
         setIsOpen(false);
         setArrivalQuantities({}); // Reset for next entry
+        setSearchTerm(''); // Reset search
     };
 
     return (
@@ -205,9 +216,21 @@ function NewArrivalDialog({ boissons, onAddArrival }: NewArrivalDialogProps) {
                     </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
-                    <div className="max-w-sm">
-                        <Label htmlFor="arrivalDate">Date d'arrivage:</Label>
-                        <Input type="date" id="arrivalDate" value={arrivalDate} onChange={(e) => setArrivalDate(e.target.value)} />
+                    <div className="flex justify-between items-end gap-4">
+                        <div className="max-w-sm">
+                            <Label htmlFor="arrivalDate">Date d'arrivage:</Label>
+                            <Input type="date" id="arrivalDate" value={arrivalDate} onChange={(e) => setArrivalDate(e.target.value)} />
+                        </div>
+                        <div className="relative w-full max-w-xs">
+                           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                           <Input
+                               type="text"
+                               placeholder="Rechercher une boisson..."
+                               value={searchTerm}
+                               onChange={(e) => setSearchTerm(e.target.value)}
+                               className="pl-10"
+                           />
+                       </div>
                     </div>
                     <div className="max-h-[50vh] overflow-y-auto pr-4">
                         <Table>
@@ -220,7 +243,7 @@ function NewArrivalDialog({ boissons, onAddArrival }: NewArrivalDialogProps) {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {boissons.map(boisson => {
+                                {filteredBoissons.map(boisson => {
                                     const { quantity = 0, caseSize } = arrivalQuantities[boisson.nom] || {};
                                     const selectedCaseSize = Array.isArray(boisson.trous) ? (caseSize ?? boisson.trous[0]) : (boisson.trous as number);
                                     const value = boisson.type === 'unite' ? (quantity * boisson.prix) : (quantity * selectedCaseSize * boisson.prix);
@@ -319,3 +342,5 @@ function ArrivalDetailsDialog({ isOpen, setIsOpen, arrival }: ArrivalDetailsDial
     </Dialog>
   );
 }
+
+    
