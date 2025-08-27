@@ -14,8 +14,8 @@ const firebaseConfig = {
   projectId: "chez-maman-didi-inv",
   storageBucket: "chez-maman-didi-inv.appspot.com",
   messagingSenderId: "95773177891",
-  appId: "1:95773177891:web:123456",
-  measurementId: "G-123456"
+  appId: "1:95773177891:web:b1d50c768c4262145b211f",
+  measurementId: "G-R8K255X615"
 };
 
 // Initialize Firebase
