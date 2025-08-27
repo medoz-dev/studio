@@ -107,7 +107,6 @@ export default function CalculationsTab({ initialOldStock, setInitialOldStock, a
     }
 
     const formattedDate = new Date(calculationDate).toLocaleDateString('fr-FR');
-    const suggestedFileName = `Inventaire du ${formattedDate} pour ${managerName || '(nom du gérant)'}`;
     
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
