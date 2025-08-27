@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -67,7 +68,7 @@ export default function SignupPage() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="password">Mot de passe</GLabel>
+              <Label htmlFor="password">Mot de passe</Label>
               <Input
                 id="password"
                 type="password"
