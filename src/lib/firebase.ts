@@ -10,6 +10,7 @@ import { getFirestore } from "firebase/firestore";
 const firebaseConfig = {
     apiKey: "AIzaSyADSUgm3BFkJP8P6nUwzIAioFMyMUt-Ccg",
     authDomain: "inventaire-pro.firebaseapp.com",
+    databaseURL: "https://inventaire-pro.firebaseio.com",
     projectId: "inventaire-pro",
     storageBucket: "inventaire-pro.firebasestorage.app",
     messagingSenderId: "876091676084",
