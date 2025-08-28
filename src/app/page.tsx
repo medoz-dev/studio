@@ -10,7 +10,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import StockTab from "@/components/stock-tab";
 import ArrivalTab from "@/components/arrival-tab";
 import CalculationsTab from "@/components/calculations-tab";
-import ChatAssistant from "@/components/ChatAssistant";
 import { useToast } from "@/hooks/use-toast";
 import { useBoissons } from "@/hooks/useBoissons";
 import { Button } from "@/components/ui/button";
@@ -216,7 +215,6 @@ export default function Home() {
         </Tabs>
         )}
       </main>
-      {!isLoading && <ChatAssistant boissons={boissons} />}
     </>
   );
 }
