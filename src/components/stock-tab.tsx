@@ -1,15 +1,17 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableFooter as TableFoot, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { type Boisson } from '@/lib/data';
-import { Printer, Save, Search } from 'lucide-react';
+import { Printer, Search, Mic, MicOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { numberToWords, parseSpokenNumber } from '@/lib/voice-utils';
+
 
 export interface StockItem {
   boisson: Boisson;
@@ -27,7 +29,109 @@ interface StockTabProps {
 export default function StockTab({ onStockUpdate, boissons, stockQuantities, onQuantityChange }: StockTabProps) {
   const [stockDate, setStockDate] = useState(new Date().toISOString().split('T')[0]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
   const { toast } = useToast();
+
+  const boissonsMap = useMemo(() => new Map(boissons.map(b => [b.nom.toLowerCase(), b])), [boissons]);
+
+
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      // toast({ title: "Erreur", description: "La reconnaissance vocale n'est pas supportée par votre navigateur.", variant: "destructive" });
+      return;
+    }
+    
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'fr-FR';
+    recognition.continuous = true;
+    recognition.interimResults = false;
+
+    recognition.onresult = (event) => {
+      const lastResult = event.results[event.results.length - 1];
+      if (lastResult.isFinal) {
+        const transcript = lastResult[0].transcript.trim().toLowerCase();
+        console.log("Texte reconnu:", transcript);
+        processVoiceCommand(transcript);
+      }
+    };
+
+    recognition.onerror = (event) => {
+      console.error("Erreur de reconnaissance vocale:", event.error);
+      if (event.error !== 'no-speech') {
+        toast({ title: "Erreur Vocale", description: `Erreur: ${event.error}`, variant: "destructive"});
+      }
+      setIsListening(false);
+    };
+
+    recognition.onend = () => {
+      // Keep listening if the user wants to
+      if (isListening) {
+        recognition.start();
+      }
+    };
+
+    recognitionRef.current = recognition;
+
+    return () => {
+      recognition.stop();
+    };
+  }, [isListening]); // Re-create if isListening changes (though we control start/stop manually)
+
+
+  const processVoiceCommand = (command: string) => {
+    let bestMatch: Boisson | null = null;
+    let quantity: number | null = null;
+    let remainingCommand = command;
+
+    // Find the best matching beverage name
+    let longestMatchLength = 0;
+    for (const [nom, boisson] of boissonsMap.entries()) {
+        if (command.startsWith(nom) && nom.length > longestMatchLength) {
+            bestMatch = boisson;
+            longestMatchLength = nom.length;
+        }
+    }
+    
+    if (bestMatch) {
+        remainingCommand = command.substring(longestMatchLength).trim();
+        const parsedQty = parseSpokenNumber(remainingCommand);
+        if (parsedQty !== null) {
+            quantity = parsedQty;
+        }
+    }
+
+    if (bestMatch && quantity !== null) {
+        handleQuantityChange(bestMatch.nom, String(quantity));
+        toast({
+            title: "Stock mis à jour",
+            description: `${bestMatch.nom}: ${quantity} unités.`,
+        });
+    } else {
+        toast({
+            title: "Commande non comprise",
+            description: `Je n'ai pas compris "${command}". Essayez "Nom de la boisson" suivi d'un nombre.`,
+            variant: "destructive",
+        });
+    }
+  };
+
+  const toggleListening = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+    } else {
+      try {
+        recognitionRef.current?.start();
+        setIsListening(true);
+      } catch(e) {
+        console.error("Could not start recognition", e);
+        toast({ title: "Erreur", description: "Impossible de démarrer la reconnaissance vocale. Vérifiez les permissions du micro.", variant: "destructive" });
+      }
+    }
+  };
+
 
   const filteredBoissons = useMemo(() => {
     if (!searchTerm) {
@@ -112,17 +216,25 @@ export default function StockTab({ onStockUpdate, boissons, stockQuantities, onQ
                         <Label htmlFor="stockDate">Date d'inventaire:</Label>
                         <Input type="date" id="stockDate" value={stockDate} onChange={(e) => setStockDate(e.target.value)} />
                     </div>
-                     <div className="relative w-full max-w-xs">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                        <Input
-                            type="text"
-                            placeholder="Rechercher une boisson..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-10"
-                        />
+                     <div className="flex items-end gap-2 w-full max-w-xs">
+                        <div className="relative w-full">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                            <Input
+                                type="text"
+                                placeholder="Rechercher une boisson..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="pl-10"
+                            />
+                        </div>
+                        {recognitionRef.current && (
+                            <Button variant={isListening ? "destructive" : "outline"} size="icon" onClick={toggleListening}>
+                                {isListening ? <MicOff /> : <Mic />}
+                            </Button>
+                        )}
                     </div>
                 </div>
+                 {isListening && <p className="text-center text-primary font-semibold mt-4 animate-pulse">J'écoute... Dites par exemple "Castel quinze"</p>}
             </CardContent>
         </Card>
 
@@ -169,8 +281,6 @@ export default function StockTab({ onStockUpdate, boissons, stockQuantities, onQ
                 </div>
             </CardContent>
             <CardFooter className="flex justify-end gap-2">
-                {/* Save button can be removed as data is saved on the fly */}
-                {/* <Button onClick={saveStockData}><Save className="mr-2 h-4 w-4" />Enregistrer le Stock</Button> */}
                 <Button variant="outline" onClick={printReport}><Printer className="mr-2 h-4 w-4" />Imprimer le Rapport</Button>
             </CardFooter>
         </Card>
