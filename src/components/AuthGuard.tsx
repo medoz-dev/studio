@@ -13,13 +13,6 @@ import { Loader2 } from 'lucide-react';
 const publicPaths = ['/login', '/payment-status'];
 
 function SubscriptionModal({ isOpen, contactInfo }: { isOpen: boolean, contactInfo: string }) {
-  const [isRedirecting, setIsRedirecting] = useState(false);
-  
-  const handleRenew = () => {
-    setIsRedirecting(true);
-    // TODO: Remplacer par le vrai lien de paiement Lygos
-    window.location.href = 'https://votre-lien-de-paiement.lygos.com'; 
-  };
 
   return (
     <Dialog open={isOpen}>
@@ -27,18 +20,19 @@ function SubscriptionModal({ isOpen, contactInfo }: { isOpen: boolean, contactIn
             <DialogHeader>
                 <DialogTitle>Abonnement Expiré ou Inactif</DialogTitle>
                 <DialogDescription>
-                    Votre abonnement a expiré ou votre période d'essai est terminée. Pour continuer à utiliser toutes les fonctionnalités, veuillez renouveler votre abonnement.
+                    Votre abonnement a expiré ou votre période d'essai est terminée. Pour continuer à utiliser l'application, veuillez renouveler votre abonnement.
                 </DialogDescription>
             </DialogHeader>
             <div className="py-4 text-center">
-                 <p className="text-muted-foreground mb-4">Cliquez sur le bouton ci-dessous pour procéder au paiement sécurisé.</p>
-                 <Button onClick={handleRenew} disabled={isRedirecting} className="w-full">
-                   {isRedirecting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                   {isRedirecting ? 'Redirection vers le paiement...' : 'Renouveler mon abonnement'}
-                 </Button>
+                 <p className="text-muted-foreground">Contactez le service client pour procéder au renouvellement.</p>
+                 <a href={`https://wa.me/${contactInfo.replace(/\s/g, '')}`} target="_blank" rel="noopener noreferrer">
+                    <Button className="w-full mt-2 bg-green-500 hover:bg-green-600">
+                        Contacter sur WhatsApp
+                    </Button>
+                 </a>
             </div>
             <DialogFooter className="text-xs text-muted-foreground text-center justify-center">
-              Pour toute question, contactez le support à {contactInfo}
+              Numéro de contact : {contactInfo}
             </DialogFooter>
         </DialogContent>
     </Dialog>
@@ -57,6 +51,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     if (isLoading) return;
 
     const pathIsPublic = publicPaths.includes(pathname);
+    const isSuperAdminPage = pathname === '/superadmin';
 
     if (!user && !pathIsPublic) {
       router.push('/login');
@@ -77,7 +72,6 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         if (docSnap.exists() && docSnap.data().finAbonnement) {
           const finAbonnementData = docSnap.data().finAbonnement;
           
-          // Firestore Timestamps can be objects with toDate() method
           const finAbonnement = finAbonnementData instanceof Timestamp 
             ? finAbonnementData.toDate() 
             : new Date(finAbonnementData);
@@ -123,9 +117,8 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     if(pathIsPublic || isSubscriptionActive) {
       return <>{children}</>;
     } else {
-      // Don't show modal on public pages even if subscription is inactive
       if (pathIsPublic) return <>{children}</>;
-      return <SubscriptionModal isOpen={true} contactInfo="contact@inventairepro.com" />;
+      return <SubscriptionModal isOpen={true} contactInfo="+229 0161170017" />;
     }
   }
 
