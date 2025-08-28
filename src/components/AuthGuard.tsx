@@ -4,13 +4,13 @@
 import { useAuth } from '@/context/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from './ui/button';
 import { Loader2 } from 'lucide-react';
 
-const publicPaths = ['/login', '/signup', '/payment-status'];
+const publicPaths = ['/login', '/payment-status'];
 
 function SubscriptionModal({ isOpen, contactInfo }: { isOpen: boolean, contactInfo: string }) {
   const [isRedirecting, setIsRedirecting] = useState(false);
@@ -63,7 +63,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       return;
     } 
     
-    if (user && (pathname === '/login' || pathname === '/signup')) {
+    if (user && (pathname === '/login')) {
       router.push('/');
       return;
     }
@@ -76,21 +76,30 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         let isActive = false;
         if (docSnap.exists() && docSnap.data().finAbonnement) {
           const finAbonnementData = docSnap.data().finAbonnement;
-          const finAbonnement = finAbonnementData.toDate ? finAbonnementData.toDate() : new Date(finAbonnementData);
           
-          if (finAbonnement >= new Date()) {
+          // Firestore Timestamps can be objects with toDate() method
+          const finAbonnement = finAbonnementData instanceof Timestamp 
+            ? finAbonnementData.toDate() 
+            : new Date(finAbonnementData);
+          
+          if (finAbonnement instanceof Date && !isNaN(finAbonnement.getTime()) && finAbonnement >= new Date()) {
             isActive = true;
           }
-        } else {
+
+        } else if (user.metadata.creationTime) {
           // Default 3-day trial period if no subscription date is set
-          const creationTime = user.metadata.creationTime ? new Date(user.metadata.creationTime) : new Date();
-          const trialEndDate = new Date(new Date(creationTime).setDate(creationTime.getDate() + 3));
+          const creationTime = new Date(user.metadata.creationTime);
+          const trialEndDate = new Date(creationTime.setDate(creationTime.getDate() + 3));
           if (trialEndDate >= new Date()) {
             isActive = true;
           }
         }
         setIsSubscriptionActive(isActive);
         setIsCheckingSubscription(false);
+      }, (error) => {
+          console.error("Error checking subscription:", error);
+          setIsSubscriptionActive(false);
+          setIsCheckingSubscription(false);
       });
 
       return () => unsubscribe();
@@ -114,12 +123,14 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     if(pathIsPublic || isSubscriptionActive) {
       return <>{children}</>;
     } else {
+      // Don't show modal on public pages even if subscription is inactive
+      if (pathIsPublic) return <>{children}</>;
       return <SubscriptionModal isOpen={true} contactInfo="contact@inventairepro.com" />;
     }
   }
 
-  // Fallback for login/signup pages when user is not logged in
-  if (!user && (pathname === '/login' || pathname === '/signup')) {
+  // Fallback for login pages when user is not logged in
+  if (!user && (pathname === '/login')) {
     return <>{children}</>;
   }
 
