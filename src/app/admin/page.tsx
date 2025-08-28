@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, "use useState", "useEffect" from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useBoissons } from "@/hooks/useBoissons";
 import { type Boisson } from "@/lib/data";
