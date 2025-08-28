@@ -15,7 +15,7 @@ import Link from 'next/link';
 import { ArrowLeft, ShieldCheck } from 'lucide-react';
 
 // IMPORTANT: Remplacez cette adresse e-mail par la vôtre.
-const SUPER_ADMIN_EMAIL = "admin@inventairepro.com";
+const SUPER_ADMIN_EMAIL = "melchiorganglo642@gmail.com";
 
 interface AppUser {
     id: string;

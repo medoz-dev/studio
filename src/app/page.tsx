@@ -22,7 +22,7 @@ import type { Expense } from "@/components/calculations-tab";
 import type { CalculationData, HistoryEntry } from "@/lib/types";
 
 // IMPORTANT: Remplacez cette adresse e-mail par la vôtre pour voir le lien Super Admin.
-const SUPER_ADMIN_EMAIL = "admin@inventairepro.com";
+const SUPER_ADMIN_EMAIL = "melchiorganglo642@gmail.com";
 
 export default function Home() {
   const [stockTotal, setStockTotal] = useState(0);
