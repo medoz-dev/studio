@@ -85,18 +85,11 @@ export default function LoginPage() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="password">Mot de passe</Label>
-              <Input
-                id="password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-               <div className="text-right text-sm">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Mot de passe</Label>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <button type="button" className="underline font-semibold text-primary">Mot de passe oublié ?</button>
+                     <Button variant="link" type="button" className="text-xs p-0 h-auto">Mot de passe oublié ?</Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
@@ -122,6 +115,13 @@ export default function LoginPage() {
                   </AlertDialogContent>
                 </AlertDialog>
               </div>
+              <Input
+                id="password"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
