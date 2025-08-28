@@ -50,13 +50,13 @@ export default function LoginPage() {
     try {
         await sendPasswordResetEmail(auth, resetEmail);
         toast({
-            title: "Succès",
-            description: "Un e-mail de réinitialisation a été envoyé à votre adresse.",
+            title: "Email envoyé",
+            description: "Si un compte existe, un lien a été envoyé. Vérifiez vos spams.",
         });
     } catch (error: any) {
         toast({
             title: "Erreur",
-            description: "Impossible d'envoyer l'e-mail. Vérifiez l'adresse.",
+            description: "Impossible d'envoyer l'e-mail. Veuillez réessayer plus tard.",
             variant: "destructive",
         });
     }
@@ -89,7 +89,7 @@ export default function LoginPage() {
                 <Label htmlFor="password">Mot de passe</Label>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                     <Button variant="link" type="button" className="text-xs p-0 h-auto">Mot de passe oublié ?</Button>
+                     <Button variant="link" type="button" className="text-sm p-0 h-auto">Mot de passe oublié ?</Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
