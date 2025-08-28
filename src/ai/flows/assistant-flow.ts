@@ -26,7 +26,7 @@ const BoissonSchema = z.object({
     specialUnit: z.number().optional(),
 });
 
-export const AssistantInputSchema = z.object({
+const AssistantInputSchema = z.object({
   question: z.string().describe("La question actuelle de l'utilisateur."),
   boissons: z.array(BoissonSchema).describe("La liste des boissons disponibles avec leurs détails."),
   history: z.array(MessageSchema).describe("L'historique de la conversation jusqu'à présent."),
