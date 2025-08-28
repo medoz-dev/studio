@@ -4,10 +4,9 @@
 import { useAuth } from '@/context/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from './ui/button';
 
 const publicPaths = ['/login', '/signup'];
 
@@ -18,7 +17,7 @@ function SubscriptionModal({ isOpen, contactInfo }: { isOpen: boolean, contactIn
             <DialogHeader>
                 <DialogTitle>Abonnement Expiré ou Inactif</DialogTitle>
                 <DialogDescription>
-                    Votre abonnement a expiré ou vous êtes en fin de période d'essai. Pour continuer à utiliser toutes les fonctionnalités, veuillez renouveler votre abonnement.
+                    Votre abonnement a expiré ou votre période d'essai est terminée. Pour continuer à utiliser toutes les fonctionnalités, veuillez renouveler votre abonnement.
                 </DialogDescription>
             </DialogHeader>
             <div className="py-4">
@@ -60,13 +59,16 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
         let isActive = false;
         if (docSnap.exists() && docSnap.data().finAbonnement) {
-          const finAbonnement = new Date(docSnap.data().finAbonnement);
+          // Convert Firestore Timestamp to Date if necessary
+          const finAbonnementData = docSnap.data().finAbonnement;
+          const finAbonnement = finAbonnementData.toDate ? finAbonnementData.toDate() : new Date(finAbonnementData);
+          
           if (finAbonnement >= new Date()) {
             isActive = true;
           }
         } else {
           // Default 3-day trial period if no subscription date is set
-          const creationTime = new Date(user.metadata.creationTime || Date.now());
+          const creationTime = user.metadata.creationTime ? new Date(user.metadata.creationTime) : new Date();
           const trialEndDate = new Date(creationTime.setDate(creationTime.getDate() + 3));
           if (trialEndDate >= new Date()) {
             isActive = true;
@@ -88,11 +90,13 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   }
   
   const pathIsPublic = publicPaths.includes(pathname);
-
+  
+  // If user is not logged in and path is public, show the page
   if (!user && pathIsPublic) {
     return <>{children}</>;
   }
   
+  // If user is logged in, check subscription status for non-public paths
   if (user && !pathIsPublic) {
     if(isSubscriptionActive) {
       return <>{children}</>;
@@ -101,6 +105,13 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       return <SubscriptionModal isOpen={true} contactInfo="contact@inventairepro.com" />;
     }
   }
+  
+  // If user is logged in and tries to access a public path, they are redirected, so this prevents flicker.
+  if (user && pathIsPublic) {
+      return <div className="flex h-screen w-full items-center justify-center">Redirection...</div>;
+  }
 
+
+  // Fallback for any edge cases, though should ideally not be reached.
   return null;
 }
