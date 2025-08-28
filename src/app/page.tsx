@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { doc, getDocs, setDoc, onSnapshot, collection, query, orderBy, limit, deleteDoc, addDoc, writeBatch, getDoc } from "firebase/firestore";
+import { doc, getDocs, setDoc, onSnapshot, collection, query, orderBy, limit, deleteDoc, addDoc, writeBatch, getDoc, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,12 +13,30 @@ import CalculationsTab from "@/components/calculations-tab";
 import { useToast } from "@/hooks/use-toast";
 import { useBoissons } from "@/hooks/useBoissons";
 import { Button } from "@/components/ui/button";
-import { Settings, History, LogOut } from "lucide-react";
+import { Settings, History, LogOut, ShieldCheck } from "lucide-react";
 import { auth } from '@/lib/firebase';
 import type { StockItem } from "@/components/stock-tab";
 import type { ArrivalItem } from "@/components/arrival-tab";
 import type { Expense } from "@/components/calculations-tab";
 import type { CalculationData, HistoryEntry } from "@/lib/types";
+import { differenceInDays } from 'date-fns';
+
+const SUPER_ADMIN_EMAIL = "melchiorganglo642@gmail.com";
+
+function SubscriptionStatus({ subscriptionEndDate }: { subscriptionEndDate: Date | null }) {
+    if (!subscriptionEndDate) {
+        return <p className="text-sm mt-2 text-yellow-300">Période d'essai active.</p>;
+    }
+
+    const today = new Date();
+    const remainingDays = differenceInDays(subscriptionEndDate, today);
+
+    if (remainingDays < 0) {
+        return <p className="text-sm mt-2 text-red-300 font-bold">Abonnement expiré.</p>;
+    }
+    
+    return <p className="text-sm mt-2">Jours restants : <span className="font-bold">{remainingDays} jour(s)</span></p>;
+}
 
 
 export default function Home() {
@@ -32,17 +50,25 @@ export default function Home() {
   const { boissons, isLoading } = useBoissons();
   const { user } = useAuth();
   const [userName, setUserName] = useState('');
+  const [subscriptionEndDate, setSubscriptionEndDate] = useState<Date | null>(null);
 
+  const isSuperAdmin = user?.email === SUPER_ADMIN_EMAIL;
 
   useEffect(() => {
     if (!user) return;
 
-    // Fetch user's name
+    // Listener for user's data (name and subscription)
     const userDocRef = doc(db, 'users', user.uid);
-    getDoc(userDocRef).then(docSnap => {
-      if (docSnap.exists() && docSnap.data().name) {
-        setUserName(docSnap.data().name);
-      }
+    const unsubUser = onSnapshot(userDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            setUserName(data.name || '');
+            if (data.finAbonnement && data.finAbonnement instanceof Timestamp) {
+                setSubscriptionEndDate(data.finAbonnement.toDate());
+            } else {
+                setSubscriptionEndDate(null);
+            }
+        }
     });
 
 
@@ -77,6 +103,7 @@ export default function Home() {
 
 
     return () => {
+      unsubUser();
       unsubQuantities();
       unsubArrivals();
       unsubHistory();
@@ -152,7 +179,16 @@ export default function Home() {
         <div className="container mx-auto py-6 text-center relative">
           <h1 className="text-4xl font-bold font-headline">Inventaire Pro</h1>
           <p className="text-lg mt-2">Bienvenue, {userName || user?.email}</p>
+          <SubscriptionStatus subscriptionEndDate={subscriptionEndDate} />
            <div className="absolute top-1/2 -translate-y-1/2 right-4 flex gap-2">
+            {isSuperAdmin && (
+                 <Link href="/superadmin">
+                    <Button variant="secondary" size="icon" title="Super Admin">
+                        <ShieldCheck />
+                        <span className="sr-only">Super Admin</span>
+                    </Button>
+                </Link>
+            )}
              <Link href="/history">
                 <Button variant="secondary" size="icon" title="Historique">
                     <History />
