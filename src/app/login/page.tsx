@@ -3,7 +3,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
@@ -129,12 +128,6 @@ export default function LoginPage() {
             <Button className="w-full" type="submit" disabled={isLoading}>
               {isLoading ? 'Connexion en cours...' : 'Se connecter'}
             </Button>
-            <p className="text-sm text-center text-muted-foreground">
-              Vous n'avez pas de compte?{' '}
-              <Link href="/signup" className="underline font-semibold">
-                S'inscrire
-              </Link>
-            </p>
           </CardFooter>
         </form>
       </Card>
