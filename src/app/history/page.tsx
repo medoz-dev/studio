@@ -11,10 +11,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter as TableFoot } from "@/components/ui/table";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { ArrowLeft, Eye, Trash2 } from "lucide-react";
+import { ArrowLeft, Eye, Trash2, Sparkles, Loader2 } from "lucide-react";
 import { HistoryEntry } from "@/lib/types";
 import { Separator } from "@/components/ui/separator";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { analyzeInventory, AnalyzeInventoryOutput } from "@/ai/flows/analyze-inventory";
 
 const SummaryItem = ({ label, value, className = '' }: { label: string, value: string, className?: string }) => (
     <div className={`flex justify-between items-center py-2 ${className}`}>
@@ -26,6 +27,9 @@ const SummaryItem = ({ label, value, className = '' }: { label: string, value: s
 export default function HistoryPage() {
     const [history, setHistory] = useState<HistoryEntry[]>([]);
     const [selectedEntry, setSelectedEntry] = useState<HistoryEntry | null>(null);
+    const [analysisResult, setAnalysisResult] = useState<AnalyzeInventoryOutput | null>(null);
+    const [isAnalysisLoading, setIsAnalysisLoading] = useState(false);
+    const [isAnalysisModalOpen, setIsAnalysisModalOpen] = useState(false);
     const { user } = useAuth();
     const [isLoading, setIsLoading] = useState(true);
 
@@ -51,6 +55,21 @@ export default function HistoryPage() {
         if (!user) return;
         const docRef = doc(db, 'users', user.uid, 'history', id);
         await deleteDoc(docRef);
+    };
+    
+    const handleAnalyze = async (entry: HistoryEntry) => {
+        setIsAnalysisLoading(true);
+        setIsAnalysisModalOpen(true);
+        setAnalysisResult(null);
+        try {
+            const result = await analyzeInventory(entry);
+            setAnalysisResult(result);
+        } catch (error) {
+            console.error("Erreur lors de l'analyse IA:", error);
+            // Optionally set an error state to show in the modal
+        } finally {
+            setIsAnalysisLoading(false);
+        }
     };
     
     return (
@@ -99,7 +118,10 @@ export default function HistoryPage() {
                                                 <TableCell className={entry.finalResult > 0 ? 'text-green-600' : entry.finalResult < 0 ? 'text-destructive' : ''}>
                                                     {entry.finalResult > 0 ? `Surplus de ${entry.finalResult.toLocaleString()} FCFA` : entry.finalResult < 0 ? `Manquant de ${Math.abs(entry.finalResult).toLocaleString()} FCFA` : 'Bon'}
                                                 </TableCell>
-                                                <TableCell className="text-right">
+                                                <TableCell className="text-right space-x-1">
+                                                     <Button variant="outline" size="sm" onClick={() => handleAnalyze(entry)}>
+                                                        <Sparkles className="mr-2 h-4 w-4 text-accent" /> Analyser
+                                                    </Button>
                                                     <Button variant="outline" size="sm" onClick={() => setSelectedEntry(entry)}>
                                                         <Eye className="mr-2 h-4 w-4" /> Détails
                                                     </Button>
@@ -136,6 +158,12 @@ export default function HistoryPage() {
                 isOpen={!!selectedEntry}
                 setIsOpen={() => setSelectedEntry(null)}
                 entry={selectedEntry}
+            />
+             <AnalysisDialog
+                isOpen={isAnalysisModalOpen}
+                setIsOpen={setIsAnalysisModalOpen}
+                isLoading={isAnalysisLoading}
+                result={analysisResult}
             />
         </>
     );
@@ -251,3 +279,55 @@ function HistoryDetailsDialog({ isOpen, setIsOpen, entry }: { isOpen: boolean, s
         </Dialog>
     );
 }
+
+function AnalysisDialog({ isOpen, setIsOpen, isLoading, result }: { isOpen: boolean, setIsOpen: (open: boolean) => void, isLoading: boolean, result: AnalyzeInventoryOutput | null }) {
+    return (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogContent className="max-w-lg">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                        <Sparkles className="text-accent"/>
+                        Analyse par l'Intelligence Artificielle
+                    </DialogTitle>
+                    <DialogDescription>
+                        Voici une analyse et des recommandations basées sur votre dernier rapport d'inventaire.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4 max-h-[60vh] overflow-y-auto">
+                    {isLoading ? (
+                        <div className="flex flex-col items-center justify-center text-center gap-4">
+                            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                            <p className="text-muted-foreground">Analyse en cours... Veuillez patienter.</p>
+                        </div>
+                    ) : result ? (
+                        <div className="space-y-4">
+                            <div>
+                                <h3 className="font-semibold text-lg mb-2">📈 Résumé des Performances</h3>
+                                <p className="text-sm text-foreground bg-secondary/50 p-3 rounded-md">{result.performanceSummary}</p>
+                            </div>
+                             <div>
+                                <h3 className="font-semibold text-lg mb-2">💡 Recommandations</h3>
+                                <ul className="list-disc pl-5 space-y-2 text-sm">
+                                    {result.recommendations.map((rec, index) => (
+                                        <li key={index}>{rec}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                            <div>
+                                <h3 className="font-semibold text-lg mb-2">⚠️ Points d'Attention</h3>
+                                <p className="text-sm text-foreground bg-destructive/10 p-3 rounded-md">{result.pointsToWatch}</p>
+                            </div>
+                        </div>
+                    ) : (
+                        <p className="text-center text-destructive">L'analyse n'a pas pu être effectuée. Veuillez réessayer.</p>
+                    )}
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsOpen(false)}>Fermer</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+    
