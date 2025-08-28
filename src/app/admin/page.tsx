@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, "use useState", "useEffect" from "react";
 import Link from "next/link";
 import { useBoissons } from "@/hooks/useBoissons";
 import { type Boisson } from "@/lib/data";
@@ -142,25 +142,27 @@ interface BoissonFormDialogProps {
 }
 
 function BoissonFormDialog({ isOpen, setIsOpen, boisson, addBoisson, updateBoisson, existingBoissons }: BoissonFormDialogProps) {
-    const [formData, setFormData] = useState<Partial<Boisson>>({});
+    const [formData, setFormData] = useState<Partial<Boisson> & { trous: string | number }>({});
     const { toast } = useToast();
 
     useEffect(() => {
-        if (boisson) {
-            setFormData({
-                ...boisson,
-                trous: Array.isArray(boisson.trous) ? boisson.trous.join(',') : boisson.trous?.toString()
-            });
-        } else {
-            setFormData({
-                nom: '',
-                prix: 0,
-                type: 'casier',
-                trous: '',
-                special: false,
-                specialPrice: 0,
-                specialUnit: 0,
-            });
+        if (isOpen) {
+            if (boisson) {
+                setFormData({
+                    ...boisson,
+                    trous: Array.isArray(boisson.trous) ? boisson.trous.join(',') : (boisson.trous?.toString() ?? '')
+                });
+            } else {
+                setFormData({
+                    nom: '',
+                    prix: 0,
+                    type: 'casier',
+                    trous: '',
+                    special: false,
+                    specialPrice: 0,
+                    specialUnit: 0,
+                });
+            }
         }
     }, [boisson, isOpen]);
 
@@ -192,12 +194,20 @@ function BoissonFormDialog({ isOpen, setIsOpen, boisson, addBoisson, updateBoiss
         }
         
         const trousString = String(formData.trous || '');
-        let trous: number | number[];
+        let trousValue: number | number[];
         if (trousString.includes(',')) {
-            trous = trousString.split(',').map(s => Number(s.trim())).filter(n => !isNaN(n) && n > 0);
+            trousValue = trousString.split(',').map(s => Number(s.trim())).filter(n => !isNaN(n) && n > 0);
+             if (trousValue.length === 0) {
+                toast({ title: "Erreur", description: "Veuillez entrer des unités valides (ex: 12, 20).", variant: "destructive" });
+                return;
+            }
         } else {
-            trous = Number(trousString);
-            if (isNaN(trous)) trous = 0;
+            const numTrous = Number(trousString);
+            if (isNaN(numTrous) || numTrous <= 0) {
+                 toast({ title: "Erreur", description: "Veuillez entrer un nombre d'unités valide.", variant: "destructive" });
+                 return;
+            }
+            trousValue = numTrous;
         }
 
 
@@ -205,7 +215,7 @@ function BoissonFormDialog({ isOpen, setIsOpen, boisson, addBoisson, updateBoiss
             nom,
             prix,
             type: formData.type || 'casier',
-            trous: trous,
+            trous: trousValue,
             special: formData.special || false,
             specialPrice: Number(formData.specialPrice) || 0,
             specialUnit: Number(formData.specialUnit) || 0,
