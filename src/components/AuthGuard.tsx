@@ -118,7 +118,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       return <>{children}</>;
     } else {
       if (pathIsPublic) return <>{children}</>;
-      return <SubscriptionModal isOpen={true} contactInfo="+229 0161170017" />;
+      return <SubscriptionModal isOpen={true} contactInfo="+2290161170017" />;
     }
   }
 
