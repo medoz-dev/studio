@@ -75,27 +75,29 @@ export default function StockTab({ onStockUpdate, boissons, stockQuantities, onQ
     recognitionRef.current = recognition;
 
     return () => {
-      recognition.stop();
+      if(recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
     };
-  }, [isListening]); // Re-create if isListening changes (though we control start/stop manually)
+  }, []); // Changed dependency to run only once
 
 
   const processVoiceCommand = (command: string) => {
     let bestMatch: Boisson | null = null;
     let quantity: number | null = null;
-    let remainingCommand = command;
-
-    // Find the best matching beverage name
+    
+    // Find the best matching beverage name anywhere in the command
     let longestMatchLength = 0;
     for (const [nom, boisson] of boissonsMap.entries()) {
-        if (command.startsWith(nom) && nom.length > longestMatchLength) {
+        const index = command.indexOf(nom);
+        if (index !== -1 && nom.length > longestMatchLength) {
             bestMatch = boisson;
             longestMatchLength = nom.length;
         }
     }
     
     if (bestMatch) {
-        remainingCommand = command.substring(longestMatchLength).trim();
+        const remainingCommand = command.substring(command.indexOf(bestMatch.nom.toLowerCase()) + longestMatchLength).trim();
         const parsedQty = parseSpokenNumber(remainingCommand);
         if (parsedQty !== null) {
             quantity = parsedQty;
@@ -118,16 +120,20 @@ export default function StockTab({ onStockUpdate, boissons, stockQuantities, onQ
   };
 
   const toggleListening = () => {
+    const recognition = recognitionRef.current;
+    if (!recognition) return;
+
     if (isListening) {
-      recognitionRef.current?.stop();
+      recognition.stop();
       setIsListening(false);
     } else {
       try {
-        recognitionRef.current?.start();
+        recognition.start();
         setIsListening(true);
       } catch(e) {
         console.error("Could not start recognition", e);
         toast({ title: "Erreur", description: "Impossible de démarrer la reconnaissance vocale. Vérifiez les permissions du micro.", variant: "destructive" });
+        setIsListening(false);
       }
     }
   };
