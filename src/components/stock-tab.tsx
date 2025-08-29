@@ -33,22 +33,25 @@ function calculateSpecialPrice(quantity: number, boisson: Boisson): number {
     }
 
     // Sort prices by unit descending to prioritize larger packages
-    const sortedPrices = boisson.specialPrices.sort((a, b) => b.unit - a.unit);
+    const sortedPrices = [...boisson.specialPrices].sort((a, b) => b.unit - a.unit);
     
     let remainingQty = quantity;
     let totalValue = 0;
 
     for (const tier of sortedPrices) {
-        if (remainingQty >= tier.unit) {
+        if (tier.unit > 0 && remainingQty >= tier.unit) {
             const count = Math.floor(remainingQty / tier.unit);
             totalValue += count * tier.price;
             remainingQty %= tier.unit;
         }
     }
     
-    // Handle any remainder with the smallest unit price (if it's not explicitly the single unit price)
+    // The smallest unit price should be the fallback for any remainder.
+    // It's assumed to be the tier with unit: 1 or the base price.
     const singleUnitPrice = sortedPrices.find(p => p.unit === 1)?.price ?? boisson.prix;
-    totalValue += remainingQty * singleUnitPrice;
+    if (remainingQty > 0) {
+      totalValue += remainingQty * singleUnitPrice;
+    }
 
     return totalValue;
 }

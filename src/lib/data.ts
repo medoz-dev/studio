@@ -43,9 +43,7 @@ export const defaultBoissons: Boisson[] = [
       type: "casier",
       special: true,
       specialPrices: [
-        { unit: 6, price: 2000 },
-        { unit: 5, price: 1700 },
-        { unit: 4, price: 1350 },
+        { unit: 24, price: 8000 },
         { unit: 3, price: 1000 },
         { unit: 1, price: 350 }
       ]
