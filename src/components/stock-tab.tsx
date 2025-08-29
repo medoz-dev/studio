@@ -27,6 +27,33 @@ interface StockTabProps {
   onQuantityChange: (quantities: Record<string, number>) => void;
 }
 
+function calculateSpecialPrice(quantity: number, boisson: Boisson): number {
+    if (!boisson.special || !boisson.specialPrices || boisson.specialPrices.length === 0) {
+        return quantity * boisson.prix;
+    }
+
+    // Sort prices by unit descending to prioritize larger packages
+    const sortedPrices = boisson.specialPrices.sort((a, b) => b.unit - a.unit);
+    
+    let remainingQty = quantity;
+    let totalValue = 0;
+
+    for (const tier of sortedPrices) {
+        if (remainingQty >= tier.unit) {
+            const count = Math.floor(remainingQty / tier.unit);
+            totalValue += count * tier.price;
+            remainingQty %= tier.unit;
+        }
+    }
+    
+    // Handle any remainder with the smallest unit price (if it's not explicitly the single unit price)
+    const singleUnitPrice = sortedPrices.find(p => p.unit === 1)?.price ?? boisson.prix;
+    totalValue += remainingQty * singleUnitPrice;
+
+    return totalValue;
+}
+
+
 export default function StockTab({ onStockUpdate, boissons, stockQuantities, onQuantityChange }: StockTabProps) {
   const [stockDate, setStockDate] = useState(new Date().toISOString().split('T')[0]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -70,6 +97,10 @@ export default function StockTab({ onStockUpdate, boissons, stockQuantities, onQ
       }
     };
     
+    const isListeningRef = React.createRef<boolean>();
+    // @ts-ignore
+    isListeningRef.current = isListening;
+
     recognition.onend = () => {
         if(isListeningRef.current) {
             recognition.start();
@@ -77,9 +108,7 @@ export default function StockTab({ onStockUpdate, boissons, stockQuantities, onQ
     }
 
     recognitionRef.current = recognition;
-    const isListeningRef = React.createRef<boolean>();
-    // @ts-ignore
-    isListeningRef.current = isListening;
+    
 
 
     return () => {
@@ -190,13 +219,7 @@ export default function StockTab({ onStockUpdate, boissons, stockQuantities, onQ
   const stockDetails: StockItem[] = useMemo(() => {
     return filteredBoissons.map(boisson => {
       const quantity = stockQuantities[boisson.nom] || 0;
-      let value = 0;
-      if (boisson.special && boisson.specialUnit && boisson.specialPrice) {
-        const groups = Math.round((quantity / boisson.specialUnit) * 10) / 10;
-        value = Math.round(groups * boisson.specialPrice);
-      } else {
-        value = quantity * boisson.prix;
-      }
+      let value = calculateSpecialPrice(quantity, boisson);
       return { boisson, quantity, value };
     });
   }, [stockQuantities, filteredBoissons]);
@@ -205,13 +228,7 @@ export default function StockTab({ onStockUpdate, boissons, stockQuantities, onQ
     // We calculate total based on ALL quantities, not just filtered ones
     return boissons.reduce((acc, boisson) => {
         const quantity = stockQuantities[boisson.nom] || 0;
-        let value = 0;
-        if (boisson.special && boisson.specialUnit && boisson.specialPrice) {
-            const groups = Math.round((quantity / boisson.specialUnit) * 10) / 10;
-            value = Math.round(groups * boisson.specialPrice);
-        } else {
-            value = quantity * boisson.prix;
-        }
+        let value = calculateSpecialPrice(quantity, boisson);
         return acc + value;
     }, 0);
   }, [stockQuantities, boissons]);
@@ -220,13 +237,7 @@ export default function StockTab({ onStockUpdate, boissons, stockQuantities, onQ
     const allStockDetails = boissons
       .map(boisson => {
         const quantity = stockQuantities[boisson.nom] || 0;
-        let value = 0;
-        if (boisson.special && boisson.specialUnit && boisson.specialPrice) {
-          const groups = Math.round((quantity / boisson.specialUnit) * 10) / 10;
-          value = Math.round(groups * boisson.specialPrice);
-        } else {
-          value = quantity * boisson.prix;
-        }
+        const value = calculateSpecialPrice(quantity, boisson);
         return { boisson, quantity, value };
       })
       .filter(d => d.quantity > 0);
@@ -300,7 +311,7 @@ export default function StockTab({ onStockUpdate, boissons, stockQuantities, onQ
                               <TableRow key={boisson.nom}>
                                   <TableCell className="font-medium whitespace-nowrap">{boisson.nom}</TableCell>
                                   <TableCell className="whitespace-nowrap">
-                                      {boisson.special ? `${boisson.specialPrice} FCFA / ${boisson.specialUnit} unités` : `${boisson.prix} FCFA`}
+                                      {boisson.special && boisson.specialPrices ? 'Voir promo' : `${boisson.prix} FCFA`}
                                   </TableCell>
                                   <TableCell>
                                       <Input 

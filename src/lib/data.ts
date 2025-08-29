@@ -6,6 +6,7 @@ export type Boisson = {
   special?: boolean;
   specialPrice?: number;
   specialUnit?: number;
+  specialPrices?: { unit: number; price: number }[];
 };
 
 export const defaultBoissons: Boisson[] = [
@@ -35,7 +36,20 @@ export const defaultBoissons: Boisson[] = [
     { nom: "J.P Chenet", prix: 6000, trous: 6, type: "carton" },
     { nom: "Label CINQ", prix: 10000, trous: 1, type: "unite" },
     { nom: "La Beninoise Gr", prix: 600, trous: 12, type: "casier" },
-    { nom: "La Beninoise Pt", prix: 333.33, trous: 24, type: "casier", special: true, specialPrice: 1000, specialUnit: 3 },
+    { 
+      nom: "La Beninoise Pt", 
+      prix: 350, 
+      trous: 24, 
+      type: "casier",
+      special: true,
+      specialPrices: [
+        { unit: 6, price: 2000 },
+        { unit: 5, price: 1700 },
+        { unit: 4, price: 1350 },
+        { unit: 3, price: 1000 },
+        { unit: 1, price: 350 }
+      ]
+    },
     { nom: "Legend", prix: 600, trous: 12, type: "casier" },
     { nom: "Lion-force", prix: 600, trous: 24, type: "casier" },
     { nom: "Malta Café", prix: 350, trous: 24, type: "casier" },
