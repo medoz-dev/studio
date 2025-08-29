@@ -28,10 +28,19 @@ interface StockTabProps {
 }
 
 function calculateSpecialPrice(quantity: number, boisson: Boisson): number {
+    if (boisson.nom === "La Beninoise Pt" && boisson.specialPrices) {
+        const promoTier = boisson.specialPrices.find(p => p.unit === 3);
+        if (promoTier) {
+            const numLots = Math.floor(quantity / promoTier.unit);
+            const remainingUnits = quantity % promoTier.unit;
+            return (numLots * promoTier.price) + (remainingUnits * boisson.prix);
+        }
+    }
+
     if (!boisson.special || !boisson.specialPrices || boisson.specialPrices.length === 0) {
         return quantity * boisson.prix;
     }
-
+    
     // Sort prices by unit descending to prioritize larger packages
     const sortedPrices = [...boisson.specialPrices].sort((a, b) => b.unit - a.unit);
     
@@ -345,5 +354,3 @@ export default function StockTab({ onStockUpdate, boissons, stockQuantities, onQ
     </div>
   );
 }
-
-    
