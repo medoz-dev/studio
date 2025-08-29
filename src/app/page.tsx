@@ -19,21 +19,42 @@ import type { StockItem } from "@/components/stock-tab";
 import type { ArrivalItem } from "@/components/arrival-tab";
 import type { Expense } from "@/components/calculations-tab";
 import type { CalculationData, HistoryEntry } from "@/lib/types";
-import { differenceInDays } from 'date-fns';
+import { differenceInDays, format, addDays } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
-function SubscriptionStatus({ subscriptionEndDate }: { subscriptionEndDate: Date | null }) {
-    if (!subscriptionEndDate) {
-        return <p className="text-sm mt-2 text-yellow-300">Période d'essai active.</p>;
-    }
 
+function SubscriptionStatus({ subscriptionEndDate, creationDate }: { subscriptionEndDate: Date | null, creationDate: string | null }) {
     const today = new Date();
-    const remainingDays = differenceInDays(subscriptionEndDate, today);
+    today.setHours(0, 0, 0, 0); // Normalize today to the beginning of the day
 
-    if (remainingDays < 0) {
-        return <p className="text-sm mt-2 text-red-300 font-bold">Abonnement expiré.</p>;
+    if (subscriptionEndDate) {
+        const endDate = new Date(subscriptionEndDate);
+        endDate.setHours(23, 59, 59, 999); // Normalize end date to the end of the day
+        const remainingDays = differenceInDays(endDate, today);
+        const formattedEndDate = format(endDate, 'd MMMM yyyy', { locale: fr });
+
+        if (remainingDays < 0) {
+            return <p className="text-sm mt-2 text-red-300 font-bold">Abonnement expiré depuis le {formattedEndDate}.</p>;
+        }
+        if (remainingDays <= 5) {
+             return <p className="text-sm mt-2 text-yellow-300">Votre abonnement expire le {formattedEndDate} ({remainingDays} jour(s) restant(s)).</p>;
+        }
+        return <p className="text-sm mt-2">Actif jusqu'au {formattedEndDate} ({remainingDays} jours restants).</p>;
     }
     
-    return <p className="text-sm mt-2">Jours restants : <span className="font-bold">{remainingDays} jour(s)</span></p>;
+    if (creationDate) {
+        const trialEndDate = addDays(new Date(creationDate), 3);
+        trialEndDate.setHours(23, 59, 59, 999);
+        const remainingDays = differenceInDays(trialEndDate, today);
+        const formattedEndDate = format(trialEndDate, 'd MMMM yyyy', { locale: fr });
+
+         if (remainingDays < 0) {
+            return <p className="text-sm mt-2 text-red-300 font-bold">Période d'essai terminée.</p>;
+        }
+        return <p className="text-sm mt-2 text-yellow-300">Essai gratuit jusqu'au {formattedEndDate} ({remainingDays} jour(s) restant(s)).</p>;
+    }
+
+    return null; // Return null if there's no date info at all
 }
 
 
@@ -175,7 +196,7 @@ export default function Home() {
         <div className="container mx-auto py-6 text-center relative">
           <h1 className="text-4xl font-bold font-headline">Inventaire Pro</h1>
           <p className="text-lg mt-2">Bienvenue, {userName || user?.email}</p>
-          <SubscriptionStatus subscriptionEndDate={subscriptionEndDate} />
+          <SubscriptionStatus subscriptionEndDate={subscriptionEndDate} creationDate={user?.metadata.creationTime ?? null} />
            <div className="absolute top-1/2 -translate-y-1/2 right-4 flex gap-2">
              <Link href="/history">
                 <Button variant="secondary" size="icon" title="Historique">
