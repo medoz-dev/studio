@@ -27,40 +27,13 @@ interface StockTabProps {
   onQuantityChange: (quantities: Record<string, number>) => void;
 }
 
-function calculateSpecialPrice(quantity: number, boisson: Boisson): number {
-    if (boisson.nom === "La Beninoise Pt" && boisson.specialPrices) {
-        const promoTier = boisson.specialPrices.find(p => p.unit === 3);
-        if (promoTier) {
-            const numLots = Math.floor(quantity / promoTier.unit);
-            const remainingUnits = quantity % promoTier.unit;
-            return (numLots * promoTier.price) + (remainingUnits * boisson.prix);
-        }
+function calculateValue(quantity: number, boisson: Boisson): number {
+    if (boisson.special && boisson.specialPrice && boisson.specialUnit) {
+        const numLots = Math.floor(quantity / boisson.specialUnit);
+        const remainingUnits = quantity % boisson.specialUnit;
+        return (numLots * boisson.specialPrice) + (remainingUnits * boisson.prix);
     }
-
-    if (!boisson.special || !boisson.specialPrices || boisson.specialPrices.length === 0) {
-        return quantity * boisson.prix;
-    }
-    
-    // Sort prices by unit descending to prioritize larger packages
-    const sortedPrices = [...boisson.specialPrices].sort((a, b) => b.unit - a.unit);
-    
-    let remainingQty = quantity;
-    let totalValue = 0;
-
-    for (const tier of sortedPrices) {
-        if (tier.unit > 0 && remainingQty >= tier.unit) {
-            const count = Math.floor(remainingQty / tier.unit);
-            totalValue += count * tier.price;
-            remainingQty %= tier.unit;
-        }
-    }
-    
-    // Fallback to the base unit price for any remainder.
-    if (remainingQty > 0) {
-      totalValue += remainingQty * boisson.prix;
-    }
-
-    return totalValue;
+    return quantity * boisson.prix;
 }
 
 
@@ -229,7 +202,7 @@ export default function StockTab({ onStockUpdate, boissons, stockQuantities, onQ
   const stockDetails: StockItem[] = useMemo(() => {
     return filteredBoissons.map(boisson => {
       const quantity = stockQuantities[boisson.nom] || 0;
-      let value = calculateSpecialPrice(quantity, boisson);
+      let value = calculateValue(quantity, boisson);
       return { boisson, quantity, value };
     });
   }, [stockQuantities, filteredBoissons]);
@@ -238,7 +211,7 @@ export default function StockTab({ onStockUpdate, boissons, stockQuantities, onQ
     // We calculate total based on ALL quantities, not just filtered ones
     return boissons.reduce((acc, boisson) => {
         const quantity = stockQuantities[boisson.nom] || 0;
-        let value = calculateSpecialPrice(quantity, boisson);
+        let value = calculateValue(quantity, boisson);
         return acc + value;
     }, 0);
   }, [stockQuantities, boissons]);
@@ -247,7 +220,7 @@ export default function StockTab({ onStockUpdate, boissons, stockQuantities, onQ
     const allStockDetails = boissons
       .map(boisson => {
         const quantity = stockQuantities[boisson.nom] || 0;
-        const value = calculateSpecialPrice(quantity, boisson);
+        const value = calculateValue(quantity, boisson);
         return { boisson, quantity, value };
       })
       .filter(d => d.quantity > 0);
@@ -321,7 +294,7 @@ export default function StockTab({ onStockUpdate, boissons, stockQuantities, onQ
                               <TableRow key={boisson.nom}>
                                   <TableCell className="font-medium whitespace-nowrap">{boisson.nom}</TableCell>
                                   <TableCell className="whitespace-nowrap">
-                                      {boisson.special && boisson.specialPrices ? 'Voir promo' : `${boisson.prix} FCFA`}
+                                      {boisson.special && boisson.specialPrice ? 'Voir promo' : `${boisson.prix} FCFA`}
                                   </TableCell>
                                   <TableCell>
                                       <Input 

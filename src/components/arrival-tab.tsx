@@ -134,14 +134,6 @@ function calculateArrivalValue(quantity: number, boisson: Boisson, caseSize?: nu
         ? (caseSize ?? boisson.trous[0]) 
         : (boisson.trous as number);
     
-    // Custom logic for La Beninoise Pt
-    if (boisson.nom === "La Beninoise Pt") {
-        // 1 case of 24 = 8 lots of 3 = 8 * 1000 = 8000
-        // We calculate value per case, not per unit.
-        const valuePerCase = 8000;
-        return quantity * valuePerCase;
-    }
-
     if (boisson.type === 'unite') {
         return quantity * boisson.prix;
     }

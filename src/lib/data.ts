@@ -41,11 +41,7 @@ export const defaultBoissons: Boisson[] = [
       nom: "La Beninoise Pt", 
       prix: 350, 
       trous: 24, 
-      type: "casier",
-      special: true,
-      specialPrices: [
-        { unit: 3, price: 1000 }
-      ]
+      type: "casier"
     },
     { nom: "Legend", prix: 600, trous: 12, type: "casier" },
     { nom: "Lion-force", prix: 600, trous: 24, type: "casier" },
