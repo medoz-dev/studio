@@ -137,6 +137,14 @@ function calculateArrivalValue(quantity: number, boisson: Boisson, caseSize?: nu
     if (boisson.type === 'unite') {
         return quantity * boisson.prix;
     }
+
+    if (boisson.nom === "La Beninoise Pt") {
+        const totalUnits = quantity * selectedCaseSize;
+        if (totalUnits === 0) return 0;
+        const rawValue = (totalUnits / 3) * 1000;
+        // Arrondir à la cinquantaine supérieure
+        return Math.ceil(rawValue / 50) * 50;
+    }
     
     return quantity * selectedCaseSize * boisson.prix;
 }
