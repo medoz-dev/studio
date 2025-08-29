@@ -53,34 +53,37 @@ const textToSpeechFlow = ai.defineFlow(
     outputSchema: TextToSpeechOutputSchema,
   },
   async (query) => {
-    const { media } = await ai.generate({
-      model: googleAI.model('gemini-2.5-flash-preview-tts'),
-      config: {
-        responseModalities: ['AUDIO'],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: 'Alloy' },
+    try {
+        const { media } = await ai.generate({
+          model: googleAI.model('gemini-2.5-flash-preview-tts'),
+          config: {
+            responseModalities: ['AUDIO'],
+            speechConfig: {
+              voiceConfig: {
+                prebuiltVoiceConfig: { voiceName: 'Algenib' }, // Changed voice model
+              },
+            },
           },
-        },
-      },
-      prompt: query,
-    });
+          prompt: query,
+        });
 
-    if (!media) {
-      throw new Error("Aucun média n'a été retourné par le service de synthèse vocale.");
+        if (!media) {
+          throw new Error("Aucun média n'a été retourné par le service de synthèse vocale.");
+        }
+        
+        const audioBuffer = Buffer.from(
+          media.url.substring(media.url.indexOf(',') + 1),
+          'base64'
+        );
+
+        const wavBase64 = await toWav(audioBuffer);
+
+        return {
+          media: 'data:audio/wav;base64,' + wavBase64,
+        };
+    } catch(e: any) {
+        console.error("Erreur dans textToSpeechFlow:", e);
+        throw new Error(`Échec de la génération audio : ${e.message}`);
     }
-    
-    // Le média URL est un data URI base64, nous devons extraire les données pures.
-    const audioBuffer = Buffer.from(
-      media.url.substring(media.url.indexOf(',') + 1),
-      'base64'
-    );
-
-    // Convertir les données PCM brutes en format WAV
-    const wavBase64 = await toWav(audioBuffer);
-
-    return {
-      media: 'data:audio/wav;base64,' + wavBase64,
-    };
   }
 );
