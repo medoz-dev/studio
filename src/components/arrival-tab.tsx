@@ -128,6 +128,30 @@ export default function ArrivalTab({ onArrivalUpdate, boissons }: ArrivalTabProp
   );
 }
 
+
+function calculateArrivalValue(quantity: number, boisson: Boisson, caseSize?: number): number {
+    const selectedCaseSize = Array.isArray(boisson.trous) 
+        ? (caseSize ?? boisson.trous[0]) 
+        : (boisson.trous as number);
+    
+    // Custom logic for La Beninoise Pt
+    if (boisson.nom === "La Beninoise Pt" && boisson.specialPrices) {
+        const promoTier = boisson.specialPrices.find(p => p.unit === 3);
+        if (promoTier) {
+            const totalUnits = quantity * selectedCaseSize; // e.g., 1 case * 24 units = 24 units
+            const numLots = Math.floor(totalUnits / promoTier.unit); // e.g., 24 / 3 = 8 lots
+            return numLots * promoTier.price; // e.g. 8 * 1000 = 8000
+        }
+    }
+
+    if (boisson.type === 'unite') {
+        return quantity * boisson.prix;
+    }
+    
+    return quantity * selectedCaseSize * boisson.prix;
+}
+
+
 // Dialog Component for adding a new arrival
 interface NewArrivalDialogProps {
     boissons: Boisson[];
@@ -153,16 +177,9 @@ function NewArrivalDialog({ boissons, onAddArrival }: NewArrivalDialogProps) {
     const arrivalDetails = useMemo(() => {
         return boissons.map(boisson => {
             const { quantity = 0, caseSize } = arrivalQuantities[boisson.nom] || {};
-            let selectedCaseSize = Array.isArray(boisson.trous) ? (caseSize ?? boisson.trous[0]) : (boisson.trous as number);
-            
-            let value = 0;
-            if (boisson.type === 'unite') {
-                value = quantity * boisson.prix;
-            } else {
-                value = quantity * selectedCaseSize * boisson.prix;
-            }
+            const value = calculateArrivalValue(quantity, boisson, caseSize);
 
-            return { boisson, quantity, caseSize: selectedCaseSize, value };
+            return { boisson, quantity, caseSize, value };
         }).filter(item => item.quantity > 0);
     }, [arrivalQuantities, boissons]);
 
@@ -243,8 +260,7 @@ function NewArrivalDialog({ boissons, onAddArrival }: NewArrivalDialogProps) {
                             <TableBody>
                                 {filteredBoissons.map(boisson => {
                                     const { quantity = 0, caseSize } = arrivalQuantities[boisson.nom] || {};
-                                    const selectedCaseSize = Array.isArray(boisson.trous) ? (caseSize ?? boisson.trous[0]) : (boisson.trous as number);
-                                    const value = boisson.type === 'unite' ? (quantity * boisson.prix) : (quantity * selectedCaseSize * boisson.prix);
+                                    const value = calculateArrivalValue(quantity, boisson, caseSize);
 
                                     return (
                                         <TableRow key={boisson.nom}>
@@ -264,7 +280,7 @@ function NewArrivalDialog({ boissons, onAddArrival }: NewArrivalDialogProps) {
                                                         className="text-center w-24"
                                                     />
                                                     {Array.isArray(boisson.trous) && (
-                                                        <Select value={String(selectedCaseSize)} onValueChange={(val) => handleCaseSizeChange(boisson.nom, val)}>
+                                                        <Select value={String(caseSize ?? boisson.trous[0])} onValueChange={(val) => handleCaseSizeChange(boisson.nom, val)}>
                                                             <SelectTrigger className="w-48">
                                                                 <SelectValue placeholder="Type de casier" />
                                                             </SelectTrigger>
@@ -340,3 +356,5 @@ function ArrivalDetailsDialog({ isOpen, setIsOpen, arrival }: ArrivalDetailsDial
     </Dialog>
   );
 }
+
+    

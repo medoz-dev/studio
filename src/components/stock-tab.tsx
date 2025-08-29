@@ -46,11 +46,9 @@ function calculateSpecialPrice(quantity: number, boisson: Boisson): number {
         }
     }
     
-    // The smallest unit price should be the fallback for any remainder.
-    // It's assumed to be the tier with unit: 1 or the base price.
-    const singleUnitPrice = sortedPrices.find(p => p.unit === 1)?.price ?? boisson.prix;
+    // Fallback to the base unit price for any remainder.
     if (remainingQty > 0) {
-      totalValue += remainingQty * singleUnitPrice;
+      totalValue += remainingQty * boisson.prix;
     }
 
     return totalValue;
@@ -119,7 +117,7 @@ export default function StockTab({ onStockUpdate, boissons, stockQuantities, onQ
         recognitionRef.current.stop();
       }
     };
-  }, []);
+  }, [isListening]);
 
   useEffect(() => {
     if (audioUrl && audioRef.current) {
@@ -347,3 +345,5 @@ export default function StockTab({ onStockUpdate, boissons, stockQuantities, onQ
     </div>
   );
 }
+
+    

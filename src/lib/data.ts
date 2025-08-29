@@ -1,3 +1,4 @@
+
 export type Boisson = {
   nom: string;
   prix: number;
@@ -43,9 +44,7 @@ export const defaultBoissons: Boisson[] = [
       type: "casier",
       special: true,
       specialPrices: [
-        { unit: 24, price: 8000 },
-        { unit: 3, price: 1000 },
-        { unit: 1, price: 350 }
+        { unit: 3, price: 1000 }
       ]
     },
     { nom: "Legend", prix: 600, trous: 12, type: "casier" },
@@ -69,3 +68,5 @@ export const defaultBoissons: Boisson[] = [
     { nom: "Whisky cola", prix: 600, trous: [12, 20], type: "casier" },
     { nom: "XXL", prix: 600, trous: 6, type: "sachet" },
 ];
+
+    
