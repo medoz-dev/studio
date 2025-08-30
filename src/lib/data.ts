@@ -4,7 +4,7 @@ export type Boisson = {
   prix: number;
   trous: number | number[];
   type: "casier" | "sachet" | "carton" | "unite";
-  special?: boolean;
+  special?: boolean; // Changed from specific prices to a boolean flag
   specialPrice?: number;
   specialUnit?: number;
   specialPrices?: { unit: number; price: number }[];
@@ -41,7 +41,8 @@ export const defaultBoissons: Boisson[] = [
       nom: "La Beninoise Pt", 
       prix: 350, 
       trous: 24, 
-      type: "casier"
+      type: "casier",
+      special: true
     },
     { nom: "Legend", prix: 600, trous: 12, type: "casier" },
     { nom: "Lion-force", prix: 600, trous: 24, type: "casier" },

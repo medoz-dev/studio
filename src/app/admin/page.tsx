@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Trash2, Edit, PlusCircle, ArrowLeft } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function AdminPage() {
     const { boissons, addBoisson, updateBoisson, deleteBoisson, isLoading } = useBoissons();
@@ -74,6 +75,7 @@ export default function AdminPage() {
                                         <TableHead>Prix (FCFA)</TableHead>
                                         <TableHead>Type</TableHead>
                                         <TableHead>Unités</TableHead>
+                                        <TableHead>Spécial</TableHead>
                                         <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -84,6 +86,7 @@ export default function AdminPage() {
                                             <TableCell>{boisson.prix.toLocaleString()}</TableCell>
                                             <TableCell className="capitalize">{boisson.type}</TableCell>
                                             <TableCell>{Array.isArray(boisson.trous) ? boisson.trous.join(' ou ') : boisson.trous}</TableCell>
+                                            <TableCell>{boisson.special ? 'Oui' : 'Non'}</TableCell>
                                             <TableCell className="text-right">
                                                 <Button variant="ghost" size="icon" onClick={() => openEditDialog(boisson)}>
                                                     <Edit className="h-4 w-4" />
@@ -159,8 +162,6 @@ function BoissonFormDialog({ isOpen, setIsOpen, boisson, addBoisson, updateBoiss
                     type: 'casier',
                     trous: '',
                     special: false,
-                    specialPrice: 0,
-                    specialUnit: 0,
                 });
             }
         }
@@ -174,6 +175,10 @@ function BoissonFormDialog({ isOpen, setIsOpen, boisson, addBoisson, updateBoiss
     const handleSelectChange = (name: string, value: string) => {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
+
+    const handleCheckboxChange = (checked: boolean | 'indeterminate') => {
+        setFormData(prev => ({ ...prev, special: !!checked }));
+    }
 
     const handleSubmit = async () => {
         const nom = formData.nom?.trim();
@@ -217,8 +222,6 @@ function BoissonFormDialog({ isOpen, setIsOpen, boisson, addBoisson, updateBoiss
             type: formData.type || 'casier',
             trous: trousValue,
             special: formData.special || false,
-            specialPrice: Number(formData.specialPrice) || 0,
-            specialUnit: Number(formData.specialUnit) || 0,
         };
 
         try {
@@ -270,6 +273,18 @@ function BoissonFormDialog({ isOpen, setIsOpen, boisson, addBoisson, updateBoiss
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="trous" className="text-right">Unités</Label>
                         <Input id="trous" name="trous" value={formData.trous as string || ''} onChange={handleChange} className="col-span-3" placeholder="Ex: 12 ou 12,20" />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                         <Label htmlFor="special" className="text-right col-span-1">Prix Spécial</Label>
+                         <div className="col-span-3 flex items-center space-x-2">
+                             <Checkbox id="special" name="special" checked={formData.special} onCheckedChange={handleCheckboxChange} />
+                             <label
+                                htmlFor="special"
+                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                              >
+                                Appliquer le calcul type Béninoise
+                              </label>
+                         </div>
                     </div>
                 </div>
                 <DialogFooter>

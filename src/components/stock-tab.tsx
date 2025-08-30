@@ -28,18 +28,15 @@ interface StockTabProps {
 }
 
 function calculateValue(quantity: number, boisson: Boisson): number {
-    if (boisson.nom === "La Beninoise Pt") {
-        if (quantity === 0) return 0;
+    if (quantity === 0) return 0;
+    
+    if (boisson.special) {
+        // Special calculation: (units / 3) * 1000, then rounded.
         const rawValue = (quantity / 3) * 1000;
-        // Arrondir à la cinquantaine supérieure
         return Math.ceil(rawValue / 50) * 50;
     }
-
-    if (boisson.special && boisson.specialPrice && boisson.specialUnit) {
-        const numLots = Math.floor(quantity / boisson.specialUnit);
-        const remainingUnits = quantity % boisson.specialUnit;
-        return (numLots * boisson.specialPrice) + (remainingUnits * boisson.prix);
-    }
+    
+    // Default calculation
     return quantity * boisson.prix;
 }
 
@@ -301,7 +298,7 @@ export default function StockTab({ onStockUpdate, boissons, stockQuantities, onQ
                               <TableRow key={boisson.nom}>
                                   <TableCell className="font-medium whitespace-nowrap">{boisson.nom}</TableCell>
                                   <TableCell className="whitespace-nowrap">
-                                      {boisson.nom === "La Beninoise Pt" ? 'Prix spécial' : (boisson.special && boisson.specialPrice ? 'Voir promo' : `${boisson.prix} FCFA`)}
+                                      {boisson.special ? 'Prix spécial' : `${boisson.prix} FCFA`}
                                   </TableCell>
                                   <TableCell>
                                       <Input 

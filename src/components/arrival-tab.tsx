@@ -133,20 +133,21 @@ function calculateArrivalValue(quantity: number, boisson: Boisson, caseSize?: nu
     const selectedCaseSize = Array.isArray(boisson.trous) 
         ? (caseSize ?? boisson.trous[0]) 
         : (boisson.trous as number);
-    
+
+    const totalUnits = quantity * selectedCaseSize;
+    if (totalUnits === 0) return 0;
+
+    if (boisson.special) {
+        // Special calculation: (units / 3) * 1000, then rounded.
+        const rawValue = (totalUnits / 3) * 1000;
+        return Math.ceil(rawValue / 50) * 50;
+    }
+
     if (boisson.type === 'unite') {
         return quantity * boisson.prix;
     }
-
-    if (boisson.nom === "La Beninoise Pt") {
-        const totalUnits = quantity * selectedCaseSize;
-        if (totalUnits === 0) return 0;
-        const rawValue = (totalUnits / 3) * 1000;
-        // Arrondir à la cinquantaine supérieure
-        return Math.ceil(rawValue / 50) * 50;
-    }
     
-    return quantity * selectedCaseSize * boisson.prix;
+    return totalUnits * boisson.prix;
 }
 
 
@@ -289,7 +290,7 @@ function NewArrivalDialog({ boissons, onAddArrival }: NewArrivalDialogProps) {
                                                     )}
                                                 </div>
                                             </TableCell>
-                                            <TableCell className="text-right whitespace-nowrap">{boisson.prix > 0 ? `${value.toLocaleString()} FCFA` : 'N/A'}</TableCell>
+                                            <TableCell className="text-right whitespace-nowrap">{boisson.prix > 0 || boisson.special ? `${value.toLocaleString()} FCFA` : 'N/A'}</TableCell>
                                         </TableRow>
                                     );
                                 })}
