@@ -3,20 +3,17 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [resetEmail, setResetEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
@@ -35,30 +32,6 @@ export default function LoginPage() {
         variant: "destructive",
       });
       setIsLoading(false);
-    }
-  };
-
-  const handlePasswordReset = async () => {
-    if (!resetEmail) {
-        toast({
-            title: "Erreur",
-            description: "Veuillez entrer votre adresse e-mail.",
-            variant: "destructive",
-        });
-        return;
-    }
-    try {
-        await sendPasswordResetEmail(auth, resetEmail);
-        toast({
-            title: "Email envoyé",
-            description: "Si un compte existe, un lien a été envoyé. Vérifiez vos spams.",
-        });
-    } catch (error: any) {
-        toast({
-            title: "Erreur",
-            description: "Impossible d'envoyer l'e-mail. Veuillez réessayer plus tard.",
-            variant: "destructive",
-        });
     }
   };
 
@@ -87,33 +60,6 @@ export default function LoginPage() {
             <div className="grid gap-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Mot de passe</Label>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                     <Button variant="link" type="button" className="text-sm p-0 h-auto">Mot de passe oublié ?</Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Réinitialiser le mot de passe</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Entrez votre adresse e-mail ci-dessous. Nous vous enverrons un lien pour réinitialiser votre mot de passe.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <div className="grid gap-2">
-                        <Label htmlFor="reset-email" className="sr-only">Email</Label>
-                        <Input
-                            id="reset-email"
-                            type="email"
-                            placeholder="m@exemple.com"
-                            value={resetEmail}
-                            onChange={(e) => setResetEmail(e.target.value)}
-                        />
-                    </div>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Annuler</AlertDialogCancel>
-                      <AlertDialogAction onClick={handlePasswordReset}>Envoyer</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
               </div>
               <Input
                 id="password"
