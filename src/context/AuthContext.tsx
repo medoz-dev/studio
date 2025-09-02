@@ -1,8 +1,10 @@
+
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 interface AuthContextType {
   user: User | null;
@@ -16,8 +18,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // User is signed in, check for their document in Firestore.
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if (!userDoc.exists()) {
+          // Document doesn't exist, so create it.
+          try {
+            await setDoc(userDocRef, {
+              email: user.email,
+              name: user.displayName || user.email,
+              createdAt: serverTimestamp(),
+              // finAbonnement can be set later by an admin or a subscription flow
+            });
+          } catch (error) {
+            console.error("Failed to create user document:", error);
+          }
+        }
+        setUser(user);
+      } else {
+        // User is signed out.
+        setUser(null);
+      }
       setIsLoading(false);
     });
 
