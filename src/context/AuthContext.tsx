@@ -19,6 +19,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // User is signed in, check if their document exists in Firestore
+        const userDocRef = doc(db, 'users', user.uid);
+        const docSnap = await getDoc(userDocRef);
+
+        if (!docSnap.exists()) {
+          // Document doesn't exist, create it.
+          try {
+            await setDoc(userDocRef, {
+              email: user.email,
+              name: user.displayName || user.email,
+              createdAt: serverTimestamp(),
+              finAbonnement: null,
+            });
+          } catch (error) {
+            console.error("Error creating user document:", error);
+          }
+        }
+      }
       setUser(user);
       setIsLoading(false);
     });
