@@ -26,7 +26,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         if (!docSnap.exists()) {
           // Document doesn't exist, so let's create it.
-          // This makes the app self-healing if a user doc is ever deleted.
+          // This is the self-healing logic that prevents server errors.
           try {
             await setDoc(userDocRef, {
               email: user.email,
