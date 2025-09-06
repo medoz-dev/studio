@@ -13,7 +13,7 @@ import CalculationsTab from "@/components/calculations-tab";
 import { useToast } from "@/hooks/use-toast";
 import { useBoissons } from "@/hooks/useBoissons";
 import { Button } from "@/components/ui/button";
-import { Settings, History, LogOut, ShieldCheck } from "lucide-react";
+import { Settings, History, LogOut } from "lucide-react";
 import { auth } from '@/lib/firebase';
 import type { StockItem } from "@/components/stock-tab";
 import type { ArrivalItem } from "@/components/arrival-tab";
@@ -21,8 +21,6 @@ import type { Expense } from "@/components/calculations-tab";
 import type { CalculationData, HistoryEntry } from "@/lib/types";
 import { differenceInDays, format, addDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
-
-const SUPER_ADMIN_EMAIL = "melchiorganglo642@gmail.com";
 
 
 function SubscriptionStatus({ subscriptionEndDate, creationDate }: { subscriptionEndDate: Date | null, creationDate: string | null }) {
@@ -72,8 +70,6 @@ export default function Home() {
   const { user } = useAuth();
   const [userName, setUserName] = useState('');
   const [subscriptionEndDate, setSubscriptionEndDate] = useState<Date | null>(null);
-
-  const isSuperAdmin = user?.email === SUPER_ADMIN_EMAIL;
 
   useEffect(() => {
     if (!user) return;
@@ -200,7 +196,7 @@ export default function Home() {
         <div className="container mx-auto py-6 text-center relative">
           <h1 className="text-4xl font-bold font-headline">Inventaire Pro</h1>
           <p className="text-lg mt-2">Bienvenue, {userName || user?.email}</p>
-          { !isSuperAdmin && <SubscriptionStatus subscriptionEndDate={subscriptionEndDate} creationDate={user?.metadata.creationTime ?? null} /> }
+          <SubscriptionStatus subscriptionEndDate={subscriptionEndDate} creationDate={user?.metadata.creationTime ?? null} />
            <div className="absolute top-1/2 -translate-y-1/2 right-4 flex gap-2">
              <Link href="/history">
                 <Button variant="secondary" size="icon" title="Historique">
@@ -214,14 +210,6 @@ export default function Home() {
                     <span className="sr-only">Administration</span>
                 </Button>
             </Link>
-            {isSuperAdmin && (
-                 <Link href="/superadmin">
-                    <Button variant="secondary" size="icon" title="Super Admin">
-                        <ShieldCheck />
-                        <span className="sr-only">Super Admin</span>
-                    </Button>
-                </Link>
-            )}
             <Button variant="destructive" size="icon" title="Déconnexion" onClick={handleLogout}>
                 <LogOut />
                 <span className="sr-only">Déconnexion</span>

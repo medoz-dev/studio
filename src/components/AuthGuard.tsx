@@ -9,10 +9,8 @@ import { db } from '@/lib/firebase';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from './ui/button';
 import { Loader2 } from 'lucide-react';
-import Link from 'next/link';
 
 const publicPaths = ['/login', '/payment-status'];
-const SUPER_ADMIN_EMAIL = "melchiorganglo642@gmail.com";
 const CONTACT_PHONE = "+22961170017";
 
 function SubscriptionModal({ isOpen }: { isOpen: boolean }) {
@@ -56,7 +54,6 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     }
 
     const pathIsPublic = publicPaths.includes(pathname);
-    const pathIsSuperAdmin = pathname === '/superadmin';
     
     if (!user) {
       if (!pathIsPublic) {
@@ -72,17 +69,6 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       setIsCheckingSubscription(false);
       return;
     }
-
-    if (pathIsSuperAdmin) {
-        if (user.email === SUPER_ADMIN_EMAIL) {
-            setIsSubscriptionActive(true);
-        } else {
-            router.push('/'); // Redirect non-super-admins from superadmin page
-        }
-        setIsCheckingSubscription(false);
-        return;
-    }
-
 
     // For other protected routes, check subscription
     const userDocRef = doc(db, 'users', user.uid);

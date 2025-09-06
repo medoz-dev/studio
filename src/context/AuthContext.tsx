@@ -19,26 +19,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        // User is signed in, check for their document in Firestore
-        const userDocRef = doc(db, 'users', user.uid);
-        const docSnap = await getDoc(userDocRef);
-        
-        if (!docSnap.exists()) {
-          // Document doesn't exist, so let's create it.
-          // This is the self-healing logic that prevents server errors.
-          try {
-            await setDoc(userDocRef, {
-              email: user.email,
-              name: user.displayName || user.email, // Use displayName or fallback to email
-              createdAt: serverTimestamp(), // Record when the user doc was created
-              finAbonnement: null, // Initialize subscription status
-            });
-          } catch (error) {
-            console.error("Failed to create user document:", error);
-          }
-        }
-      }
       setUser(user);
       setIsLoading(false);
     });
