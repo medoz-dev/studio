@@ -8,13 +8,12 @@ import { getFirestore } from "firebase/firestore";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-    apiKey: "AIzaSyADSUgm3BFkJP8P6nUwzIAioFMyMUt-Ccg",
-    authDomain: "inventaire-pro.firebaseapp.com",
-    databaseURL: "https://inventaire-pro.firebaseio.com",
-    projectId: "inventaire-pro",
-    storageBucket: "inventaire-pro.firebasestorage.app",
-    messagingSenderId: "876091676084",
-    appId: "1:876091676084:web:c3ab3e842278640c140ee1"
+    projectId: "monapp-pyyf6",
+    appId: "1:917297956047:web:019b80a7490d7b5012e3ba",
+    storageBucket: "monapp-pyyf6.firebasestorage.app",
+    apiKey: "AIzaSyDR4l7vuiy8PXzP7a2GPKwS6eoGLdmaYY0",
+    authDomain: "monapp-pyyf6.firebaseapp.com",
+    messagingSenderId: "917297956047"
 };
 
 // Initialize Firebase
