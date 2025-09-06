@@ -41,89 +41,91 @@ function SubscriptionModal({ isOpen, contactInfo }: { isOpen: boolean, contactIn
 
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [isSubscriptionActive, setIsSubscriptionActive] = useState(true);
   const [isCheckingSubscription, setIsCheckingSubscription] = useState(true);
 
   useEffect(() => {
-    if (isLoading) return;
+    if (authLoading) {
+      return; 
+    }
 
     const pathIsPublic = publicPaths.includes(pathname);
-    const isSuperAdminPage = pathname === '/superadmin';
-
-    if (!user && !pathIsPublic) {
-      router.push('/login');
-      return;
-    } 
     
-    if (user && (pathname === '/login')) {
-      router.push('/');
+    if (!user) {
+      if (!pathIsPublic) {
+        router.push('/login');
+      }
+      setIsCheckingSubscription(false);
       return;
     }
 
-    if (user && !pathIsPublic) {
-      setIsCheckingSubscription(true);
-      const userDocRef = doc(db, 'users', user.uid);
-      
-      const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
-        let isActive = false;
-        if (docSnap.exists() && docSnap.data().finAbonnement) {
-          const finAbonnementData = docSnap.data().finAbonnement;
-          
-          const finAbonnement = finAbonnementData instanceof Timestamp 
-            ? finAbonnementData.toDate() 
-            : new Date(finAbonnementData);
-          
-          if (finAbonnement instanceof Date && !isNaN(finAbonnement.getTime()) && finAbonnement >= new Date()) {
-            isActive = true;
-          }
+    // User is logged in
+    if (pathIsPublic) {
+      router.push('/');
+      setIsCheckingSubscription(false);
+      return;
+    }
 
-        } else if (user.metadata.creationTime) {
-          // Default 3-day trial period if no subscription date is set
-          const creationTime = new Date(user.metadata.creationTime);
-          const trialEndDate = new Date(creationTime.setDate(creationTime.getDate() + 3));
-          if (trialEndDate >= new Date()) {
+    // For protected routes, check subscription
+    const userDocRef = doc(db, 'users', user.uid);
+    const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
+      let isActive = false;
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.finAbonnement && data.finAbonnement instanceof Timestamp) {
+          const finAbonnement = data.finAbonnement.toDate();
+          if (finAbonnement >= new Date()) {
             isActive = true;
           }
         }
-        setIsSubscriptionActive(isActive);
-        setIsCheckingSubscription(false);
-      }, (error) => {
-          console.error("Error checking subscription:", error);
-          setIsSubscriptionActive(false);
-          setIsCheckingSubscription(false);
-      });
+      } 
+      
+      if (!isActive && user.metadata.creationTime) {
+        // Fallback to trial period if no active subscription
+        const creationTime = new Date(user.metadata.creationTime);
+        const trialEndDate = new Date(creationTime.setDate(creationTime.getDate() + 3));
+        if (trialEndDate >= new Date()) {
+          isActive = true;
+        }
+      }
 
-      return () => unsubscribe();
-    } else {
+      setIsSubscriptionActive(isActive);
       setIsCheckingSubscription(false);
-    }
+    }, (error) => {
+      console.error("Error checking subscription:", error);
+      setIsSubscriptionActive(false);
+      setIsCheckingSubscription(false);
+    });
 
-  }, [user, isLoading, router, pathname]);
+    return () => unsubscribe();
 
-  if (isLoading || isCheckingSubscription) {
-    return <div className="flex h-screen w-full items-center justify-center">Chargement...</div>;
-  }
-  
-  const pathIsPublic = publicPaths.includes(pathname);
-  
-  if (!user && pathIsPublic) {
-    return <>{children}</>;
+  }, [user, authLoading, router, pathname]);
+
+  if (authLoading || isCheckingSubscription) {
+    return (
+        <div className="flex h-screen w-full items-center justify-center bg-background">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="ml-4 text-lg text-muted-foreground">Chargement...</p>
+        </div>
+    );
   }
   
   if (user) {
-    if(pathIsPublic || isSubscriptionActive) {
-      return <>{children}</>;
-    } else {
-      if (pathIsPublic) return <>{children}</>;
-      return <SubscriptionModal isOpen={true} contactInfo="+2290161170017" />;
+     if (publicPaths.includes(pathname)) {
+        // This case is handled in the useEffect, but as a fallback
+        return null;
     }
+    if (isSubscriptionActive) {
+      return <>{children}</>;
+    }
+    return <SubscriptionModal isOpen={true} contactInfo="+2290161170017" />;
   }
 
-  // Fallback for login pages when user is not logged in
-  if (!user && (pathname === '/login')) {
+  // User is not logged in, allow access only to public paths
+  if (publicPaths.includes(pathname)) {
     return <>{children}</>;
   }
 
