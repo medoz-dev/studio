@@ -19,9 +19,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      // Nous ne faisons plus de création automatique ici pour respecter le choix de l'utilisateur.
-      // Le code se contente de mettre à jour l'état de l'utilisateur dans l'application.
-      // Les autres parties de l'application (comme AuthGuard) devront gérer le cas où le document n'existe pas encore.
+      if (user) {
+        // User is signed in, check for their document in Firestore
+        const userDocRef = doc(db, 'users', user.uid);
+        const docSnap = await getDoc(userDocRef);
+        
+        if (!docSnap.exists()) {
+          // Document doesn't exist, so let's create it.
+          // This makes the app self-healing if a user doc is ever deleted.
+          try {
+            await setDoc(userDocRef, {
+              email: user.email,
+              name: user.displayName || user.email, // Use displayName or fallback to email
+              createdAt: serverTimestamp(), // Record when the user doc was created
+              finAbonnement: null, // Initialize subscription status
+            });
+          } catch (error) {
+            console.error("Failed to create user document:", error);
+          }
+        }
+      }
       setUser(user);
       setIsLoading(false);
     });
