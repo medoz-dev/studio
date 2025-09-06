@@ -1,10 +1,11 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Seuls les utilisateurs authentifiés peuvent accéder à leurs propres données.
-    // L'ID utilisateur dans le chemin doit correspondre à l'ID de l'utilisateur connecté.
-    match /users/{userId}/{documents=**} {
+    
+    // Les utilisateurs ne peuvent lire/écrire que leurs propres données
+    match /users/{userId}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
   }

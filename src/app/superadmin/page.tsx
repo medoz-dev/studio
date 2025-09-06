@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ArrowLeft, Loader2, KeyRound } from 'lucide-react';
-import { format, differenceInDays, parseISO } from 'date-fns';
+import { format, differenceInDays, parseISO, addDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { listUsers, updateUserSubscription, type UserInfo } from '@/ai/flows/user-management-flow';
 import { useToast } from '@/hooks/use-toast';
@@ -77,9 +77,9 @@ export default function SuperAdminPage() {
         }
 
         if (creationTime) {
-            const trialEndDate = new Date(creationTime);
-            trialEndDate.setDate(trialEndDate.getDate() + 3);
+            const trialEndDate = addDays(new Date(creationTime), 3);
             const remainingTrialDays = differenceInDays(trialEndDate, today);
+
             if (remainingTrialDays >= 0) {
                 return <span className="text-yellow-600 font-semibold">En Essai ({remainingTrialDays}j restants)</span>;
             }
@@ -91,12 +91,12 @@ export default function SuperAdminPage() {
 
 
     if (authLoading || isLoading) {
-        return <div className="container mx-auto p-8 text-center"><Loader2 className="animate-spin inline-block mr-2" />Chargement...</div>;
+        return <div className="container mx-auto flex justify-center items-center h-screen"><Loader2 className="animate-spin inline-block mr-2 h-8 w-8" />Chargement...</div>;
     }
 
     return (
         <>
-            <header className="bg-primary text-primary-foreground shadow-md">
+            <header className="bg-primary text-primary-foreground shadow-md no-print">
                 <div className="container mx-auto py-6 text-center relative">
                     <div className="absolute top-1/2 -translate-y-1/2 left-4">
                         <Link href="/">
@@ -124,7 +124,7 @@ export default function SuperAdminPage() {
                                         <TableHead>Email</TableHead>
                                         <TableHead>Statut Abonnement</TableHead>
                                         <TableHead>Date d'expiration</TableHead>
-                                        <TableHead className="text-right">Actions</TableHead>
+                                        <TableHead className="text-right no-print">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -137,7 +137,7 @@ export default function SuperAdminPage() {
                                                     ? format(parseISO(u.finAbonnement), 'd MMMM yyyy', { locale: fr }) 
                                                     : '---'}
                                             </TableCell>
-                                            <TableCell className="text-right">
+                                            <TableCell className="text-right no-print">
                                                <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
                                                         <Button variant="outline">

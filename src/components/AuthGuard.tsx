@@ -9,10 +9,13 @@ import { db } from '@/lib/firebase';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from './ui/button';
 import { Loader2 } from 'lucide-react';
+import Link from 'next/link';
 
 const publicPaths = ['/login', '/payment-status'];
+const SUPER_ADMIN_EMAIL = "melchiorganglo642@gmail.com";
+const CONTACT_PHONE = "+22961170017";
 
-function SubscriptionModal({ isOpen, contactInfo }: { isOpen: boolean, contactInfo: string }) {
+function SubscriptionModal({ isOpen }: { isOpen: boolean }) {
 
   return (
     <Dialog open={isOpen}>
@@ -25,14 +28,14 @@ function SubscriptionModal({ isOpen, contactInfo }: { isOpen: boolean, contactIn
             </DialogHeader>
             <div className="py-4 text-center">
                  <p className="text-muted-foreground">Contactez le service client pour procéder au renouvellement.</p>
-                 <a href={`https://wa.me/${contactInfo.replace(/\s/g, '')}`} target="_blank" rel="noopener noreferrer">
+                 <a href={`https://wa.me/${CONTACT_PHONE}`} target="_blank" rel="noopener noreferrer">
                     <Button className="w-full mt-2 bg-green-500 hover:bg-green-600">
                         Contacter sur WhatsApp
                     </Button>
                  </a>
             </div>
             <DialogFooter className="text-xs text-muted-foreground text-center justify-center">
-              Numéro de contact : {contactInfo}
+              Numéro de contact : {CONTACT_PHONE.replace(/(\d{3})(\d{2})(\d{2})(\d{2})(\d{2})/, '$1 $2 $3 $4 $5')}
             </DialogFooter>
         </DialogContent>
     </Dialog>
@@ -44,7 +47,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const [isSubscriptionActive, setIsSubscriptionActive] = useState(true);
+  const [isSubscriptionActive, setIsSubscriptionActive] = useState(false);
   const [isCheckingSubscription, setIsCheckingSubscription] = useState(true);
 
   useEffect(() => {
@@ -53,6 +56,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     }
 
     const pathIsPublic = publicPaths.includes(pathname);
+    const pathIsSuperAdmin = pathname === '/superadmin';
     
     if (!user) {
       if (!pathIsPublic) {
@@ -61,7 +65,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       setIsCheckingSubscription(false);
       return;
     }
-
+    
     // User is logged in
     if (pathIsPublic) {
       router.push('/');
@@ -69,7 +73,18 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // For protected routes, check subscription
+    if (pathIsSuperAdmin) {
+        if (user.email === SUPER_ADMIN_EMAIL) {
+            setIsSubscriptionActive(true);
+        } else {
+            router.push('/'); // Redirect non-super-admins from superadmin page
+        }
+        setIsCheckingSubscription(false);
+        return;
+    }
+
+
+    // For other protected routes, check subscription
     const userDocRef = doc(db, 'users', user.uid);
     const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
       let isActive = false;
@@ -86,7 +101,8 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       if (!isActive && user.metadata.creationTime) {
         // Fallback to trial period if no active subscription
         const creationTime = new Date(user.metadata.creationTime);
-        const trialEndDate = new Date(creationTime.setDate(creationTime.getDate() + 3));
+        const trialEndDate = new Date(new Date(creationTime).setDate(creationTime.getDate() + 3));
+        trialEndDate.setHours(23, 59, 59, 999);
         if (trialEndDate >= new Date()) {
           isActive = true;
         }
@@ -104,7 +120,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
   }, [user, authLoading, router, pathname]);
 
-  if (authLoading || isCheckingSubscription) {
+  if (authLoading || (isCheckingSubscription && !publicPaths.includes(pathname))) {
     return (
         <div className="flex h-screen w-full items-center justify-center bg-background">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -115,16 +131,15 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   
   if (user) {
      if (publicPaths.includes(pathname)) {
-        // This case is handled in the useEffect, but as a fallback
-        return null;
+        return null; // Should be redirected by useEffect
     }
     if (isSubscriptionActive) {
       return <>{children}</>;
     }
-    return <SubscriptionModal isOpen={true} contactInfo="+2290161170017" />;
+    return <SubscriptionModal isOpen={true} />;
   }
 
-  // User is not logged in, allow access only to public paths
+  // User is not logged in
   if (publicPaths.includes(pathname)) {
     return <>{children}</>;
   }
