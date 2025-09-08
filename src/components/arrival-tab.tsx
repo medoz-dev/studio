@@ -163,6 +163,9 @@ function NewArrivalDialog({ boissons, onAddArrival }: NewArrivalDialogProps) {
     const [arrivalQuantities, setArrivalQuantities] = useState<Record<string, { quantity: number; caseSize?: number }>>({});
     const [searchTerm, setSearchTerm] = useState('');
     const { toast } = useToast();
+    const [entryOrder, setEntryOrder] = useState<string[]>([]);
+    
+    const boissonsMap = useMemo(() => new Map(boissons.map(b => [b.nom, b])), [boissons]);
 
     const filteredBoissons = useMemo(() => {
         if (!searchTerm) {
@@ -174,13 +177,17 @@ function NewArrivalDialog({ boissons, onAddArrival }: NewArrivalDialogProps) {
     }, [searchTerm, boissons]);
 
     const arrivalDetails = useMemo(() => {
-        return boissons.map(boisson => {
-            const { quantity = 0, caseSize } = arrivalQuantities[boisson.nom] || {};
-            const value = calculateArrivalValue(quantity, boisson, caseSize);
+        return entryOrder.map(nom => {
+            const boisson = boissonsMap.get(nom);
+            if (!boisson) return null;
 
+            const { quantity = 0, caseSize } = arrivalQuantities[nom] || {};
+            if(quantity === 0) return null;
+
+            const value = calculateArrivalValue(quantity, boisson, caseSize);
             return { boisson, quantity, caseSize, value };
-        }).filter(item => item.quantity > 0);
-    }, [arrivalQuantities, boissons]);
+        }).filter((item): item is NonNullable<typeof item> => item !== null);
+    }, [arrivalQuantities, entryOrder, boissonsMap]);
 
     const totalArrivalValue = useMemo(() => {
         return arrivalDetails.reduce((acc, item) => acc + item.value, 0);
@@ -190,6 +197,12 @@ function NewArrivalDialog({ boissons, onAddArrival }: NewArrivalDialogProps) {
         const quantity = Number(value);
         if (!isNaN(quantity) && quantity >= 0) {
             setArrivalQuantities(prev => ({ ...prev, [nom]: { ...prev[nom], quantity } }));
+            
+            if (quantity > 0 && !entryOrder.includes(nom)) {
+                setEntryOrder(prev => [...prev, nom]);
+            } else if (quantity === 0 && entryOrder.includes(nom)) {
+                setEntryOrder(prev => prev.filter(n => n !== nom));
+            }
         }
     };
 
@@ -199,22 +212,36 @@ function NewArrivalDialog({ boissons, onAddArrival }: NewArrivalDialogProps) {
     };
 
     const handleSubmit = async () => {
-        if (arrivalDetails.length === 0) {
+        const finalArrivalDetails = entryOrder.map(nom => {
+             const boisson = boissonsMap.get(nom);
+             if (!boisson) return null;
+             const { quantity = 0, caseSize } = arrivalQuantities[nom] || {};
+             if (quantity === 0) return null;
+
+             return {
+                nom,
+                quantite: quantity,
+                valeur: calculateArrivalValue(quantity, boisson, caseSize)
+             };
+        }).filter((item): item is NonNullable<typeof item> => item !== null);
+
+        if (finalArrivalDetails.length === 0) {
             toast({ title: "Erreur", description: "Veuillez ajouter au moins une boisson.", variant: "destructive" });
             return;
         }
+
+        const total = finalArrivalDetails.reduce((acc, item) => acc + item.valeur, 0);
+
         await onAddArrival({
             date: arrivalDate,
-            total: totalArrivalValue,
-            details: arrivalDetails.map(item => ({
-                nom: item.boisson.nom,
-                quantite: item.quantity,
-                valeur: item.value
-            }))
+            total: total,
+            details: finalArrivalDetails
         });
+
         setIsOpen(false);
         setArrivalQuantities({});
         setSearchTerm('');
+        setEntryOrder([]);
     };
 
     return (
