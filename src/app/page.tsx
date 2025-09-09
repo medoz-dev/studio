@@ -14,7 +14,7 @@ import CalculationsTab from "@/components/calculations-tab";
 import { useToast } from "@/hooks/use-toast";
 import { useBoissons } from "@/hooks/useBoissons";
 import { Button } from "@/components/ui/button";
-import { Settings, History, LogOut } from "lucide-react";
+import { Settings, History, LogOut, LifeBuoy } from "lucide-react";
 import { auth } from '@/lib/firebase';
 import type { StockItem } from "@/components/stock-tab";
 import type { ArrivalItem } from "@/components/arrival-tab";
@@ -22,6 +22,7 @@ import type { Expense } from "@/components/calculations-tab";
 import type { CalculationData, HistoryEntry } from "@/lib/types";
 import { differenceInDays, format, addMonths } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import HelpDialog from "@/components/HelpDialog";
 
 
 function SubscriptionStatus({ subscriptionEndDate, creationDate }: { subscriptionEndDate: Date | null, creationDate: string | null }) {
@@ -71,6 +72,8 @@ export default function Home() {
   const { user } = useAuth();
   const [userName, setUserName] = useState('');
   const [subscriptionEndDate, setSubscriptionEndDate] = useState<Date | null>(null);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
+
 
   useEffect(() => {
     if (!user) return;
@@ -199,6 +202,10 @@ export default function Home() {
           <p className="text-lg mt-2">Bienvenue, {userName || user?.email}</p>
           <SubscriptionStatus subscriptionEndDate={subscriptionEndDate} creationDate={user?.metadata.creationTime ?? null} />
            <div className="absolute top-1/2 -translate-y-1/2 right-4 flex gap-2">
+             <Button variant="secondary" size="icon" title="Aide et Infos" onClick={() => setIsHelpOpen(true)}>
+                <LifeBuoy />
+                <span className="sr-only">Aide</span>
+             </Button>
              <Link href="/history" passHref>
                 <Button asChild variant="secondary" size="icon" title="Historique">
                     <a>
@@ -255,6 +262,7 @@ export default function Home() {
         </Tabs>
         )}
       </main>
+      <HelpDialog isOpen={isHelpOpen} setIsOpen={setIsHelpOpen} />
     </>
   );
 }
