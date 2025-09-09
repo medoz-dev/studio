@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { useBoissons } from "@/hooks/useBoissons";
 import { type Boisson } from "@/lib/data";
@@ -17,11 +17,7 @@ import { Trash2, Edit, PlusCircle, ArrowLeft, Loader2 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 
-interface AdminClientProps {
-    initialBoissons: Boisson[];
-}
-
-export default function AdminClient({ initialBoissons }: AdminClientProps) {
+export default function AdminClient() {
     const { boissons, addBoisson, updateBoisson, deleteBoisson, isLoading } = useBoissons();
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingBoisson, setEditingBoisson] = useState<Boisson | null>(null);
@@ -154,10 +150,10 @@ interface BoissonFormDialogProps {
 }
 
 function BoissonFormDialog({ isOpen, setIsOpen, boisson, addBoisson, updateBoisson, existingBoissons }: BoissonFormDialogProps) {
-    const [formData, setFormData] = useState<Partial<Boisson> & { trous: string | number }>({});
+    const [formData, setFormData] = React.useState<Partial<Boisson> & { trous: string | number }>({});
     const { toast } = useToast();
 
-    useEffect(() => {
+    React.useEffect(() => {
         if (isOpen) {
             if (boisson) {
                 setFormData({
@@ -303,4 +299,3 @@ function BoissonFormDialog({ isOpen, setIsOpen, boisson, addBoisson, updateBoiss
         </Dialog>
     );
 }
-
