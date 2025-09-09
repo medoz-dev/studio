@@ -20,7 +20,7 @@ import type { StockItem } from "@/components/stock-tab";
 import type { ArrivalItem } from "@/components/arrival-tab";
 import type { Expense } from "@/components/calculations-tab";
 import type { CalculationData, HistoryEntry } from "@/lib/types";
-import { differenceInDays, format, addDays } from 'date-fns';
+import { differenceInDays, format, addMonths } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 
@@ -44,7 +44,7 @@ function SubscriptionStatus({ subscriptionEndDate, creationDate }: { subscriptio
     }
     
     if (creationDate) {
-        const trialEndDate = addDays(new Date(creationDate), 3);
+        const trialEndDate = addMonths(new Date(creationDate), 1);
         trialEndDate.setHours(23, 59, 59, 999);
         const remainingDays = differenceInDays(trialEndDate, today);
         const formattedEndDate = format(trialEndDate, 'd MMMM yyyy', { locale: fr });

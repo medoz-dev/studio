@@ -9,6 +9,8 @@ import { db } from '@/lib/firebase';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from './ui/button';
 import { Loader2 } from 'lucide-react';
+import { addMonths } from 'date-fns';
+
 
 const publicPaths = ['/login', '/payment-status'];
 const CONTACT_PHONE = "+22961170017";
@@ -93,7 +95,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       if (!isActive && user.metadata.creationTime) {
         // Fallback to trial period if no active subscription
         const creationTime = new Date(user.metadata.creationTime);
-        const trialEndDate = new Date(new Date(creationTime).setDate(creationTime.getDate() + 3));
+        const trialEndDate = addMonths(creationTime, 1);
         trialEndDate.setHours(23, 59, 59, 999);
         if (trialEndDate >= new Date()) {
           isActive = true;
