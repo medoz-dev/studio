@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { doc, getDocs, setDoc, onSnapshot, collection, query, orderBy, limit, deleteDoc, addDoc, writeBatch, getDoc, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
@@ -198,16 +199,20 @@ export default function Home() {
           <p className="text-lg mt-2">Bienvenue, {userName || user?.email}</p>
           <SubscriptionStatus subscriptionEndDate={subscriptionEndDate} creationDate={user?.metadata.creationTime ?? null} />
            <div className="absolute top-1/2 -translate-y-1/2 right-4 flex gap-2">
-             <Link href="/history">
-                <Button variant="secondary" size="icon" title="Historique">
-                    <History />
-                    <span className="sr-only">Historique</span>
+             <Link href="/history" passHref>
+                <Button asChild variant="secondary" size="icon" title="Historique">
+                    <a>
+                        <History />
+                        <span className="sr-only">Historique</span>
+                    </a>
                 </Button>
             </Link>
-             <Link href="/admin">
-                <Button variant="secondary" size="icon" title="Administration">
-                    <Settings />
-                    <span className="sr-only">Administration</span>
+             <Link href="/admin" passHref>
+                <Button asChild variant="secondary" size="icon" title="Administration">
+                    <a>
+                        <Settings />
+                        <span className="sr-only">Administration</span>
+                    </a>
                 </Button>
             </Link>
             <Button variant="destructive" size="icon" title="Déconnexion" onClick={handleLogout}>
