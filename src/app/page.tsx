@@ -139,6 +139,16 @@ export default function Home() {
     }
   }, [user]);
 
+  const handleStockUpdate = useCallback((total: number, details: StockItem[]) => {
+      setStockTotal(total);
+      setStockDetails(details);
+  }, []);
+
+  const handleArrivalUpdate = useCallback((total: number, details: ArrivalItem[]) => {
+      setArrivalTotal(total);
+      setArrivalDetails(details);
+  }, []);
+
 
   const handleSaveResults = async (calculationData: CalculationData, expenses: Expense[]) => {
     if (!user) {
@@ -241,14 +251,14 @@ export default function Home() {
           </TabsList>
           <TabsContent value="stock" className="printable-area">
             <StockTab 
-              onStockUpdate={(total, details) => { setStockTotal(total); setStockDetails(details); }} 
+              onStockUpdate={handleStockUpdate} 
               boissons={boissons} 
               stockQuantities={stockQuantities}
               onQuantityChange={handleStockQuantitiesChange}
             />
           </TabsContent>
           <TabsContent value="arrival" className="printable-area">
-            <ArrivalTab onArrivalUpdate={(total, details) => { setArrivalTotal(total); setArrivalDetails(details); }} boissons={boissons} />
+            <ArrivalTab onArrivalUpdate={handleArrivalUpdate} boissons={boissons} />
           </TabsContent>
           <TabsContent value="calculations" className="printable-area">
             <CalculationsTab
@@ -266,3 +276,5 @@ export default function Home() {
     </>
   );
 }
+
+    

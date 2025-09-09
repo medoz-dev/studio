@@ -54,10 +54,9 @@ export default function ArrivalTab({ onArrivalUpdate, boissons }: ArrivalTabProp
     return () => unsubscribe();
   }, [user]);
 
-  const totalArrivalValue = useMemo(() => {
+  useEffect(() => {
       const total = allArrivals.reduce((acc, arrival) => acc + arrival.total, 0);
       onArrivalUpdate(total, allArrivals);
-      return total;
   }, [allArrivals, onArrivalUpdate]);
 
   const handleAddArrival = async (newArrival: Omit<ArrivalItem, 'id'>) => {
@@ -73,6 +72,10 @@ export default function ArrivalTab({ onArrivalUpdate, boissons }: ArrivalTabProp
     await deleteDoc(arrivalDocRef);
     toast({ title: "Succès", description: "Arrivage supprimé." });
   };
+  
+  const totalArrivalValue = useMemo(() => {
+      return allArrivals.reduce((acc, arrival) => acc + arrival.total, 0);
+  }, [allArrivals]);
 
   return (
     <>
@@ -382,3 +385,5 @@ function ArrivalDetailsDialog({ isOpen, setIsOpen, arrival }: ArrivalDetailsDial
     </Dialog>
   );
 }
+
+    
