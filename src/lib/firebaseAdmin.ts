@@ -7,7 +7,7 @@ import { getAuth } from 'firebase-admin/auth';
 const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
 if (!serviceAccount) {
-    throw new Error('La variable d\\'environnement FIREBASE_SERVICE_ACCOUNT_KEY n\\'est pas définie. Assurez-vous de la configurer avec le contenu JSON de votre clé de service Firebase.');
+    throw new Error("La variable d'environnement FIREBASE_SERVICE_ACCOUNT_KEY n'est pas définie. Assurez-vous de la configurer avec le contenu JSON de votre clé de service Firebase.");
 }
 
 let app: App;
