@@ -25,15 +25,21 @@ function SubscriptionModal({ isOpen }: { isOpen: boolean }) {
                 </DialogDescription>
             </DialogHeader>
             <div className="py-4 text-center">
-                 <p className="text-muted-foreground">Contactez le service client pour procéder au renouvellement.</p>
-                 <a href={`https://wa.me/${CONTACT_PHONE}`} target="_blank" rel="noopener noreferrer">
+                 <p className="text-muted-foreground">Contactez Melchior Codex pour procéder au renouvellement.</p>
+                 <a href={`https://wa.me/${CONTACT_PHONE.replace(/\+/g, '')}`} target="_blank" rel="noopener noreferrer">
                     <Button className="w-full mt-2 bg-green-500 hover:bg-green-600">
                         Contacter sur WhatsApp
                     </Button>
                  </a>
+                  <a href="mailto:melchiorganglo@gmail.com">
+                    <Button variant="outline" className="w-full mt-2">
+                        Envoyer un Email
+                    </Button>
+                 </a>
             </div>
-            <DialogFooter className="text-xs text-muted-foreground text-center justify-center">
-              Numéro de contact : {CONTACT_PHONE.replace(/(\d{3})(\d{2})(\d{2})(\d{2})(\d{2})/, '$1 $2 $3 $4 $5')}
+            <DialogFooter className="text-xs text-muted-foreground text-center justify-center pt-4 border-t">
+              <p>Contact: {CONTACT_PHONE}</p>
+              <p>Email: melchiorganglo@gmail.com</p>
             </DialogFooter>
         </DialogContent>
     </Dialog>
