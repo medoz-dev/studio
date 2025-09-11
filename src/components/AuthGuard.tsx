@@ -125,13 +125,15 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   
   if (user) {
      if (publicPaths.includes(pathname)) {
-        return null; // Should be redirected by useEffect
+        // While redirecting, don't show anything
+        return null;
     }
-    if (isSubscriptionActive) {
-      return <>{children}</>;
+    // If subscription is not active, only show the modal and nothing else.
+    if (!isSubscriptionActive) {
+      return <SubscriptionModal isOpen={true} />;
     }
-    // If subscription is not active, only show the modal.
-    return <SubscriptionModal isOpen={true} />;
+    // Otherwise, show the app content
+    return <>{children}</>;
   }
 
   // User is not logged in
@@ -139,5 +141,6 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
+  // Should be redirected to login, so don't show anything.
   return null;
 }
