@@ -36,7 +36,7 @@ function SubscriptionStatus({ subscriptionEndDate, creationDate }: { subscriptio
         const formattedEndDate = format(endDate, 'd MMMM yyyy', { locale: fr });
 
         if (remainingDays < 0) {
-            return <p className="text-sm mt-2 text-red-300 font-bold">Abonnement expiré depuis le {formattedEndDate}.</p>;
+            return <p className="text-sm mt-2 text-red-300 font-bold">Abonnement expiré.</p>;
         }
         if (remainingDays <= 5) {
              return <p className="text-sm mt-2 text-yellow-300">Votre abonnement expire le {formattedEndDate} ({remainingDays} jour(s) restant(s)).</p>;
@@ -276,5 +276,7 @@ export default function Home() {
     </>
   );
 }
+
+    
 
     
