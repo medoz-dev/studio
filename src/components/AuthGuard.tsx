@@ -130,6 +130,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     if (isSubscriptionActive) {
       return <>{children}</>;
     }
+    // If subscription is not active, only show the modal.
     return <SubscriptionModal isOpen={true} />;
   }
 
