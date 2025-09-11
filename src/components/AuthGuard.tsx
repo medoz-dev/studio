@@ -9,7 +9,7 @@ import { db } from '@/lib/firebase';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from './ui/button';
 import { Loader2 } from 'lucide-react';
-import { addMonths } from 'date-fns';
+import { addDays } from 'date-fns';
 
 
 const publicPaths = ['/login', '/payment-status'];
@@ -99,7 +99,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       // Si pas d'abonnement actif, on vérifie la période d'essai (fallback)
       if (!isActive && user.metadata.creationTime) {
         const creationTime = new Date(user.metadata.creationTime);
-        const trialEndDate = addMonths(creationTime, 1);
+        const trialEndDate = addDays(creationTime, 5);
         if (trialEndDate >= today) {
           isActive = true;
         }

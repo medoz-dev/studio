@@ -20,7 +20,7 @@ import type { StockItem } from "@/components/stock-tab";
 import type { ArrivalItem } from "@/components/arrival-tab";
 import type { Expense } from "@/components/calculations-tab";
 import type { CalculationData, HistoryEntry } from "@/lib/types";
-import { differenceInDays, format, addMonths } from 'date-fns';
+import { differenceInDays, format, addDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import HelpDialog from "@/components/HelpDialog";
 
@@ -45,7 +45,7 @@ function SubscriptionStatus({ subscriptionEndDate, creationDate }: { subscriptio
     }
     
     if (creationDate) {
-        const trialEndDate = addMonths(new Date(creationDate), 1);
+        const trialEndDate = addDays(new Date(creationDate), 5);
         trialEndDate.setHours(23, 59, 59, 999);
         const remainingDays = differenceInDays(trialEndDate, today);
         const formattedEndDate = format(trialEndDate, 'd MMMM yyyy', { locale: fr });
@@ -216,20 +216,18 @@ export default function Home() {
                 <LifeBuoy />
                 <span className="sr-only">Aide</span>
              </Button>
-             <Link href="/history" passHref>
+             <Link href="/history">
                 <Button asChild variant="secondary" size="icon" title="Historique">
-                    <a>
+                    
                         <History />
-                        <span className="sr-only">Historique</span>
-                    </a>
+                        
                 </Button>
             </Link>
-             <Link href="/admin" passHref>
+             <Link href="/admin">
                 <Button asChild variant="secondary" size="icon" title="Administration">
-                    <a>
+                    
                         <Settings />
-                        <span className="sr-only">Administration</span>
-                    </a>
+                        
                 </Button>
             </Link>
             <Button variant="destructive" size="icon" title="Déconnexion" onClick={handleLogout}>
