@@ -114,7 +114,9 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
   }, [user, authLoading, router, pathname]);
 
-  if (authLoading || (isCheckingSubscription && !publicPaths.includes(pathname))) {
+  const isChecking = authLoading || (isCheckingSubscription && !publicPaths.includes(pathname));
+
+  if (isChecking) {
     return (
         <div className="flex h-screen w-full items-center justify-center bg-background">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -125,14 +127,13 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   
   if (user) {
      if (publicPaths.includes(pathname)) {
-        // While redirecting, don't show anything
         return null;
     }
-    // If subscription is not active, only show the modal and nothing else.
+    
     if (!isSubscriptionActive) {
       return <SubscriptionModal isOpen={true} />;
     }
-    // Otherwise, show the app content
+    
     return <>{children}</>;
   }
 
@@ -141,6 +142,5 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  // Should be redirected to login, so don't show anything.
   return null;
 }
