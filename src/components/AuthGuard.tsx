@@ -71,33 +71,35 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       return;
     }
     
-    // User is logged in
+    // L'utilisateur est connecté
     if (pathIsPublic) {
       router.push('/');
       setIsCheckingSubscription(false);
       return;
     }
 
-    // For other protected routes, check subscription
+    // Pour les autres routes protégées, on vérifie l'abonnement
     const userDocRef = doc(db, 'users', user.uid);
     const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
       let isActive = false;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Important pour comparer les jours
+
       if (docSnap.exists()) {
         const data = docSnap.data();
         if (data.finAbonnement && data.finAbonnement instanceof Timestamp) {
           const finAbonnement = data.finAbonnement.toDate();
-          if (finAbonnement >= new Date()) {
+          if (finAbonnement >= today) {
             isActive = true;
           }
         }
       } 
       
+      // Si pas d'abonnement actif, on vérifie la période d'essai (fallback)
       if (!isActive && user.metadata.creationTime) {
-        // Fallback to trial period if no active subscription
         const creationTime = new Date(user.metadata.creationTime);
         const trialEndDate = addMonths(creationTime, 1);
-        trialEndDate.setHours(23, 59, 59, 999);
-        if (trialEndDate >= new Date()) {
+        if (trialEndDate >= today) {
           isActive = true;
         }
       }
@@ -105,7 +107,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       setIsSubscriptionActive(isActive);
       setIsCheckingSubscription(false);
     }, (error) => {
-      console.error("Error checking subscription:", error);
+      console.error("Erreur de vérification de l'abonnement:", error);
       setIsSubscriptionActive(false);
       setIsCheckingSubscription(false);
     });
@@ -114,8 +116,10 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
   }, [user, authLoading, router, pathname]);
 
-  const isChecking = authLoading || (isCheckingSubscription && !publicPaths.includes(pathname));
 
+  const isChecking = authLoading || (user && isCheckingSubscription);
+
+  // Écran de chargement pendant que l'authentification et la vérification de l'abonnement sont en cours
   if (isChecking) {
     return (
         <div className="flex h-screen w-full items-center justify-center bg-background">
@@ -125,22 +129,24 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
   
-  if (user) {
-     if (publicPaths.includes(pathname)) {
-        return null;
+  const pathIsPublic = publicPaths.includes(pathname);
+
+  // Si l'utilisateur n'est pas connecté
+  if (!user) {
+    // Si la page est publique, on l'affiche (ex: /login)
+    if (pathIsPublic) {
+      return <>{children}</>;
     }
-    
-    if (!isSubscriptionActive) {
-      return <SubscriptionModal isOpen={true} />;
-    }
-    
+    // Sinon (l'utilisateur tente d'accéder à une page protégée sans être connecté), on ne rend rien, useEffect a déjà redirigé.
+    return null;
+  }
+
+  // Si l'utilisateur est connecté
+  // Si l'abonnement est actif, on affiche l'application
+  if (isSubscriptionActive) {
     return <>{children}</>;
   }
 
-  // User is not logged in
-  if (publicPaths.includes(pathname)) {
-    return <>{children}</>;
-  }
-
-  return null;
+  // Si l'abonnement N'EST PAS actif, on affiche UNIQUEMENT la modale de blocage.
+  return <SubscriptionModal isOpen={true} />;
 }
