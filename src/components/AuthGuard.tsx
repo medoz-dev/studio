@@ -6,7 +6,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { doc, onSnapshot, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from './ui/button';
 import { Loader2 } from 'lucide-react';
 import { addMonths } from 'date-fns';
@@ -15,37 +15,38 @@ import { addMonths } from 'date-fns';
 const publicPaths = ['/login', '/payment-status'];
 const CONTACT_PHONE = "+22961170017";
 
-function SubscriptionModal({ isOpen }: { isOpen: boolean }) {
-
+function SubscriptionBlockPage() {
   return (
-    <Dialog open={isOpen}>
-        <DialogContent onInteractOutside={(e) => e.preventDefault()} className="max-w-md">
-            <DialogHeader>
-                <DialogTitle>Abonnement Expiré ou Inactif</DialogTitle>
-                <DialogDescription>
-                    Votre abonnement a expiré ou votre période d'essai est terminée. Pour continuer à utiliser l'application, veuillez renouveler votre abonnement.
-                </DialogDescription>
-            </DialogHeader>
-            <div className="py-4 text-center">
-                 <p className="text-muted-foreground">Contactez Melchior Codex pour procéder au renouvellement.</p>
-                 <a href={`https://wa.me/${CONTACT_PHONE.replace(/\+/g, '')}`} target="_blank" rel="noopener noreferrer">
-                    <Button className="w-full mt-2 bg-green-500 hover:bg-green-600">
-                        Contacter sur WhatsApp
-                    </Button>
-                 </a>
-                  <a href="mailto:melchiorganglo@gmail.com">
-                    <Button variant="outline" className="w-full mt-2">
-                        Envoyer un Email
-                    </Button>
-                 </a>
-            </div>
-            <DialogFooter className="text-xs text-muted-foreground text-center justify-center pt-4 border-t">
-              <p>Contact: {CONTACT_PHONE}</p>
-              <p>Email: melchiorganglo@gmail.com</p>
-            </DialogFooter>
-        </DialogContent>
-    </Dialog>
-  )
+    <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-md text-center">
+        <CardHeader>
+          <CardTitle className="text-2xl text-destructive">Abonnement Expiré</CardTitle>
+          <CardDescription>
+            Votre abonnement ou votre période d'essai est terminé. Pour continuer à utiliser Inventaire Pro, veuillez renouveler.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="py-4">
+          <p className="text-muted-foreground mb-4">Contactez Melchior Codex pour procéder au renouvellement.</p>
+          <div className="flex flex-col gap-2">
+            <a href={`https://wa.me/${CONTACT_PHONE.replace(/\+/g, '')}`} target="_blank" rel="noopener noreferrer">
+              <Button className="w-full bg-green-500 hover:bg-green-600">
+                Contacter sur WhatsApp
+              </Button>
+            </a>
+            <a href="mailto:melchiorganglo@gmail.com">
+              <Button variant="outline" className="w-full">
+                Envoyer un Email
+              </Button>
+            </a>
+          </div>
+        </CardContent>
+        <CardFooter className="flex-col gap-1 pt-6 text-xs text-muted-foreground">
+          <p><strong>Contact:</strong> {CONTACT_PHONE}</p>
+          <p><strong>Email:</strong> melchiorganglo@gmail.com</p>
+        </CardFooter>
+      </Card>
+    </main>
+  );
 }
 
 
@@ -124,7 +125,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     return (
         <div className="flex h-screen w-full items-center justify-center bg-background">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="ml-4 text-lg text-muted-foreground">Chargement...</p>
+            <p className="ml-4 text-lg text-muted-foreground">Vérification de l'accès...</p>
         </div>
     );
   }
@@ -147,6 +148,6 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  // Si l'abonnement N'EST PAS actif, on affiche UNIQUEMENT la modale de blocage.
-  return <SubscriptionModal isOpen={true} />;
+  // Si l'abonnement N'EST PAS actif, on affiche UNIQUEMENT la page de blocage.
+  return <SubscriptionBlockPage />;
 }
