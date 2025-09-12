@@ -9,7 +9,7 @@ import { db } from '@/lib/firebase';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from './ui/button';
 import { Loader2 } from 'lucide-react';
-import { addDays } from 'date-fns';
+import { addDays, isBefore } from 'date-fns';
 
 
 const publicPaths = ['/login', '/payment-status', '/'];
@@ -84,13 +84,11 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
       let isActive = false;
       const today = new Date();
-      today.setHours(0, 0, 0, 0); // Important pour comparer les jours
 
       if (docSnap.exists()) {
         const data = docSnap.data();
         if (data.finAbonnement && data.finAbonnement instanceof Timestamp) {
-          const finAbonnement = data.finAbonnement.toDate();
-          if (finAbonnement >= today) {
+          if (isBefore(today, data.finAbonnement.toDate())) {
             isActive = true;
           }
         }
@@ -100,7 +98,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       if (!isActive && user.metadata.creationTime) {
         const creationTime = new Date(user.metadata.creationTime);
         const trialEndDate = addDays(creationTime, 5);
-        if (trialEndDate >= today) {
+        if (isBefore(today, trialEndDate)) {
           isActive = true;
         }
       }

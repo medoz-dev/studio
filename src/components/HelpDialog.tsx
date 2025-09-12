@@ -54,7 +54,7 @@ export default function HelpDialog({ isOpen, setIsOpen }: { isOpen: boolean, set
                 <AccordionItem value="subscription">
                     <AccordionTrigger className="font-semibold">Comment fonctionne l'abonnement ?</AccordionTrigger>
                     <AccordionContent>
-                        Vous bénéficiez d'un <strong>essai gratuit complet d'un mois</strong> à partir de votre date d'inscription.
+                        Vous bénéficiez d'un <strong>essai gratuit complet de 5 jours</strong> à partir de votre date d'inscription.
                         <br/><br/>
                         Une fois cette période terminée, un abonnement est nécessaire pour continuer à utiliser l'application. L'abonnement vous garantit l'accès à toutes les fonctionnalités, au support technique et aux futures mises à jour.
                     </AccordionContent>
@@ -82,3 +82,5 @@ export default function HelpDialog({ isOpen, setIsOpen }: { isOpen: boolean, set
     </Dialog>
   );
 }
+
+    

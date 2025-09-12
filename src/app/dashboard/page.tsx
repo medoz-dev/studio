@@ -3,7 +3,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { doc, getDocs, setDoc, onSnapshot, collection, query, orderBy, limit, deleteDoc, addDoc, writeBatch, getDoc, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
@@ -14,49 +13,45 @@ import CalculationsTab from "@/components/calculations-tab";
 import { useToast } from "@/hooks/use-toast";
 import { useBoissons } from "@/hooks/useBoissons";
 import { Button } from "@/components/ui/button";
-import { Settings, History, LogOut, LifeBuoy } from "lucide-react";
+import { Settings, History, LogOut, LifeBuoy, Home } from "lucide-react";
 import { auth } from '@/lib/firebase';
 import type { StockItem } from "@/components/stock-tab";
 import type { ArrivalItem } from "@/components/arrival-tab";
 import type { Expense } from "@/components/calculations-tab";
 import type { CalculationData, HistoryEntry } from "@/lib/types";
-import { differenceInDays, format, addDays } from 'date-fns';
+import { differenceInDays, format, addDays, isBefore } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import HelpDialog from "@/components/HelpDialog";
 
 
 function SubscriptionStatus({ subscriptionEndDate, creationDate }: { subscriptionEndDate: Date | null, creationDate: string | null }) {
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // Normalize today to the beginning of the day
-
+    
     if (subscriptionEndDate) {
-        const endDate = new Date(subscriptionEndDate);
-        endDate.setHours(23, 59, 59, 999); // Normalize end date to the end of the day
-        const remainingDays = differenceInDays(endDate, today);
-        const formattedEndDate = format(endDate, 'd MMMM yyyy', { locale: fr });
-
-        if (remainingDays < 0) {
-            return <p className="text-sm mt-2 text-red-300 font-bold">Abonnement expiré.</p>;
+        if (isBefore(today, subscriptionEndDate)) {
+             const remainingDays = differenceInDays(subscriptionEndDate, today);
+             const formattedEndDate = format(subscriptionEndDate, 'd MMMM yyyy', { locale: fr });
+             if (remainingDays <= 5) {
+                 return <p className="text-sm mt-2 text-yellow-300">Votre abonnement expire le {formattedEndDate} ({remainingDays} jour(s) restant(s)).</p>;
+             }
+             return <p className="text-sm mt-2">Actif jusqu'au {formattedEndDate} ({remainingDays} jours restants).</p>;
+        } else {
+             return <p className="text-sm mt-2 text-red-300 font-bold">Abonnement expiré.</p>;
         }
-        if (remainingDays <= 5) {
-             return <p className="text-sm mt-2 text-yellow-300">Votre abonnement expire le {formattedEndDate} ({remainingDays} jour(s) restant(s)).</p>;
-        }
-        return <p className="text-sm mt-2">Actif jusqu'au {formattedEndDate} ({remainingDays} jours restants).</p>;
     }
     
     if (creationDate) {
         const trialEndDate = addDays(new Date(creationDate), 5);
-        trialEndDate.setHours(23, 59, 59, 999);
-        const remainingDays = differenceInDays(trialEndDate, today);
-        const formattedEndDate = format(trialEndDate, 'd MMMM yyyy', { locale: fr });
-
-         if (remainingDays < 0) {
+        if(isBefore(today, trialEndDate)) {
+            const remainingDays = differenceInDays(trialEndDate, today);
+            const formattedEndDate = format(trialEndDate, 'd MMMM yyyy', { locale: fr });
+            return <p className="text-sm mt-2 text-yellow-300">Essai gratuit jusqu'au {formattedEndDate} ({remainingDays} jour(s) restant(s)).</p>;
+        } else {
             return <p className="text-sm mt-2 text-red-300 font-bold">Période d'essai terminée.</p>;
         }
-        return <p className="text-sm mt-2 text-yellow-300">Essai gratuit jusqu'au {formattedEndDate} ({remainingDays} jour(s) restant(s)).</p>;
     }
 
-    return null; // Return null if there's no date info at all
+    return null;
 }
 
 
@@ -211,6 +206,13 @@ export default function DashboardPage() {
           <h1 className="text-4xl font-bold font-headline">Inventaire Pro</h1>
           <p className="text-lg mt-2">Bienvenue, {userName || user?.email}</p>
           <SubscriptionStatus subscriptionEndDate={subscriptionEndDate} creationDate={user?.metadata.creationTime ?? null} />
+          <div className="absolute top-1/2 -translate-y-1/2 left-4">
+             <Link href="/">
+                <Button asChild variant="secondary" size="icon" title="Page d'accueil">
+                    <Home />
+                </Button>
+            </Link>
+          </div>
            <div className="absolute top-1/2 -translate-y-1/2 right-4 flex gap-2">
              <Button variant="secondary" size="icon" title="Aide et Infos" onClick={() => setIsHelpOpen(true)}>
                 <LifeBuoy />
@@ -218,16 +220,12 @@ export default function DashboardPage() {
              </Button>
              <Link href="/history">
                 <Button asChild variant="secondary" size="icon" title="Historique">
-                    
-                        <History />
-                        
+                    <History />
                 </Button>
             </Link>
              <Link href="/admin">
                 <Button asChild variant="secondary" size="icon" title="Administration">
-                    
-                        <Settings />
-                        
+                    <Settings />
                 </Button>
             </Link>
             <Button variant="destructive" size="icon" title="Déconnexion" onClick={handleLogout}>
@@ -274,5 +272,7 @@ export default function DashboardPage() {
     </>
   );
 }
+
+    
 
     
