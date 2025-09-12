@@ -151,7 +151,7 @@ export default function LandingPage() {
                 <div className="flex justify-center">
                     <Card className="max-w-md w-full shadow-lg">
                         <CardHeader>
-                            <CardTitle className="text-center text-2xl">Abonnement Annuel</CardTitle>
+                            <CardTitle className="text-center text-2xl">Abonnement Mensuel</CardTitle>
                             <CardDescription className="text-center">Accès complet. Support prioritaire.</CardDescription>
                         </CardHeader>
                         <CardContent className="text-center">
