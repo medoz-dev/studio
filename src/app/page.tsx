@@ -197,7 +197,7 @@ export default function LandingPage() {
                          <AccordionItem value="item-3">
                             <AccordionTrigger>Que se passe-t-il après la période d'essai ?</AccordionTrigger>
                             <AccordionContent>
-                                Après les 5 jours, votre accès sera limité. Pour continuer à utiliser l'application, vous devrez souscrire à notre abonnement annuel en nous contactant directement.
+                                Après les 5 jours, votre accès sera limité. Pour continuer à utiliser l'application, vous devrez souscrire à notre abonnement mensuel en nous contactant directement.
                             </AccordionContent>
                         </AccordionItem>
                         <AccordionItem value="item-4">
