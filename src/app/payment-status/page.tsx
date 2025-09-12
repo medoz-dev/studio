@@ -67,7 +67,7 @@ export default function PaymentStatusPage() {
                 </CardContent>
                 <div className="p-6 border-t">
                     {!isLoading && (
-                         <Link href="/">
+                         <Link href="/dashboard">
                             <Button className="w-full">
                                 {status === 'success' ? "Accéder à l'application" : "Retourner à l'accueil"}
                             </Button>
@@ -78,3 +78,5 @@ export default function PaymentStatusPage() {
         </main>
     );
 }
+
+    

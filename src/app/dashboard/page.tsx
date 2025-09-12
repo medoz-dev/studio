@@ -1,0 +1,278 @@
+
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { doc, getDocs, setDoc, onSnapshot, collection, query, orderBy, limit, deleteDoc, addDoc, writeBatch, getDoc, Timestamp } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useAuth } from "@/context/AuthContext";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import StockTab from "@/components/stock-tab";
+import ArrivalTab from "@/components/arrival-tab";
+import CalculationsTab from "@/components/calculations-tab";
+import { useToast } from "@/hooks/use-toast";
+import { useBoissons } from "@/hooks/useBoissons";
+import { Button } from "@/components/ui/button";
+import { Settings, History, LogOut, LifeBuoy } from "lucide-react";
+import { auth } from '@/lib/firebase';
+import type { StockItem } from "@/components/stock-tab";
+import type { ArrivalItem } from "@/components/arrival-tab";
+import type { Expense } from "@/components/calculations-tab";
+import type { CalculationData, HistoryEntry } from "@/lib/types";
+import { differenceInDays, format, addDays } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import HelpDialog from "@/components/HelpDialog";
+
+
+function SubscriptionStatus({ subscriptionEndDate, creationDate }: { subscriptionEndDate: Date | null, creationDate: string | null }) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Normalize today to the beginning of the day
+
+    if (subscriptionEndDate) {
+        const endDate = new Date(subscriptionEndDate);
+        endDate.setHours(23, 59, 59, 999); // Normalize end date to the end of the day
+        const remainingDays = differenceInDays(endDate, today);
+        const formattedEndDate = format(endDate, 'd MMMM yyyy', { locale: fr });
+
+        if (remainingDays < 0) {
+            return <p className="text-sm mt-2 text-red-300 font-bold">Abonnement expiré.</p>;
+        }
+        if (remainingDays <= 5) {
+             return <p className="text-sm mt-2 text-yellow-300">Votre abonnement expire le {formattedEndDate} ({remainingDays} jour(s) restant(s)).</p>;
+        }
+        return <p className="text-sm mt-2">Actif jusqu'au {formattedEndDate} ({remainingDays} jours restants).</p>;
+    }
+    
+    if (creationDate) {
+        const trialEndDate = addDays(new Date(creationDate), 5);
+        trialEndDate.setHours(23, 59, 59, 999);
+        const remainingDays = differenceInDays(trialEndDate, today);
+        const formattedEndDate = format(trialEndDate, 'd MMMM yyyy', { locale: fr });
+
+         if (remainingDays < 0) {
+            return <p className="text-sm mt-2 text-red-300 font-bold">Période d'essai terminée.</p>;
+        }
+        return <p className="text-sm mt-2 text-yellow-300">Essai gratuit jusqu'au {formattedEndDate} ({remainingDays} jour(s) restant(s)).</p>;
+    }
+
+    return null; // Return null if there's no date info at all
+}
+
+
+export default function DashboardPage() {
+  const [stockTotal, setStockTotal] = useState(0);
+  const [stockDetails, setStockDetails] = useState<StockItem[]>([]);
+  const [arrivalTotal, setArrivalTotal] = useState(0);
+  const [arrivalDetails, setArrivalDetails] = useState<ArrivalItem[]>([]);
+  const [oldStock, setOldStock] = useState(0);
+  const [stockQuantities, setStockQuantities] = useState<Record<string, number>>({});
+  const { toast } = useToast();
+  const { boissons, isLoading } = useBoissons();
+  const { user } = useAuth();
+  const [userName, setUserName] = useState('');
+  const [subscriptionEndDate, setSubscriptionEndDate] = useState<Date | null>(null);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
+
+
+  useEffect(() => {
+    if (!user) return;
+
+    // Listener for user's data (name and subscription)
+    const userDocRef = doc(db, 'users', user.uid);
+    const unsubUser = onSnapshot(userDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            setUserName(data.name || '');
+            if (data.finAbonnement && data.finAbonnement instanceof Timestamp) {
+                setSubscriptionEndDate(data.finAbonnement.toDate());
+            } else {
+                setSubscriptionEndDate(null);
+            }
+        }
+    });
+
+
+    // Listener for current stock quantities
+    const quantitiesDocRef = doc(db, 'users', user.uid, 'inventoryState', 'stockQuantities');
+    const unsubQuantities = onSnapshot(quantitiesDocRef, (doc) => {
+      if (doc.exists()) {
+        setStockQuantities(doc.data() || {});
+      }
+    });
+
+    // Listener for all arrivals
+    const arrivalsColRef = collection(db, 'users', user.uid, 'currentArrivals');
+    const unsubArrivals = onSnapshot(arrivalsColRef, (snapshot) => {
+      const arrivalsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ArrivalItem));
+      const total = arrivalsData.reduce((acc, arrival) => acc + arrival.total, 0);
+      setArrivalTotal(total);
+      setArrivalDetails(arrivalsData);
+    });
+    
+    // Get latest stock value from history to set as oldStock
+    const historyColRef = collection(db, 'users', user.uid, 'history');
+    const q = query(historyColRef, orderBy('date', 'desc'), limit(1));
+    const unsubHistory = onSnapshot(q, (snapshot) => {
+        if (!snapshot.empty) {
+            const lastEntry = snapshot.docs[0].data() as HistoryEntry;
+            setOldStock(lastEntry.currentStockTotal || 0);
+        } else {
+            setOldStock(0);
+        }
+    });
+
+
+    return () => {
+      unsubUser();
+      unsubQuantities();
+      unsubArrivals();
+      unsubHistory();
+    };
+  }, [user]);
+
+  const handleStockQuantitiesChange = useCallback(async (quantities: Record<string, number>) => {
+    setStockQuantities(quantities);
+    if (user) {
+      const docRef = doc(db, 'users', user.uid, 'inventoryState', 'stockQuantities');
+      await setDoc(docRef, quantities, { merge: true });
+    }
+  }, [user]);
+
+  const handleStockUpdate = useCallback((total: number, details: StockItem[]) => {
+      setStockTotal(total);
+      setStockDetails(details);
+  }, []);
+
+  const handleArrivalUpdate = useCallback((total: number, details: ArrivalItem[]) => {
+      setArrivalTotal(total);
+      setArrivalDetails(details);
+  }, []);
+
+
+  const handleSaveResults = async (calculationData: CalculationData, expenses: Expense[]) => {
+    if (!user) {
+      toast({ title: "Erreur", description: "Vous devez être connecté.", variant: "destructive" });
+      return;
+    }
+    try {
+        const historyEntry: Omit<HistoryEntry, 'id'> = {
+            ...calculationData,
+            stockDetails: stockDetails,
+            arrivalDetails: arrivalDetails,
+            expenseDetails: expenses,
+        };
+
+        const batch = writeBatch(db);
+
+        // Add to history collection
+        const historyColRef = collection(db, 'users', user.uid, 'history');
+        const newHistoryDoc = doc(historyColRef);
+        batch.set(newHistoryDoc, historyEntry);
+
+        // Clear current arrivals by deleting all documents in the collection
+        const arrivalsColRef = collection(db, 'users', user.uid, 'currentArrivals');
+        const arrivalsSnapshot = await getDocs(arrivalsColRef);
+        arrivalsSnapshot.forEach((doc) => {
+            batch.delete(doc.ref);
+        });
+        
+        // Clear stock quantities
+        const quantitiesDocRef = doc(db, 'users', user.uid, 'inventoryState', 'stockQuantities');
+        batch.set(quantitiesDocRef, {});
+
+        // Commit all batched writes at once
+        await batch.commit();
+
+        toast({
+            title: "Succès!",
+            description: `Résultats pour ${calculationData.managerName} enregistrés dans l'historique!`,
+        });
+
+        // State will be reset by listeners
+    } catch (error) {
+        console.error("Failed to save results to Firestore", error);
+        toast({
+            title: "Erreur",
+            description: "Impossible d'enregistrer les résultats.",
+            variant: "destructive",
+        });
+    }
+  };
+  
+  const handleLogout = async () => {
+    await auth.signOut();
+  }
+
+  return (
+    <>
+      <header className="bg-primary text-primary-foreground shadow-md no-print">
+        <div className="container mx-auto py-6 text-center relative">
+          <h1 className="text-4xl font-bold font-headline">Inventaire Pro</h1>
+          <p className="text-lg mt-2">Bienvenue, {userName || user?.email}</p>
+          <SubscriptionStatus subscriptionEndDate={subscriptionEndDate} creationDate={user?.metadata.creationTime ?? null} />
+           <div className="absolute top-1/2 -translate-y-1/2 right-4 flex gap-2">
+             <Button variant="secondary" size="icon" title="Aide et Infos" onClick={() => setIsHelpOpen(true)}>
+                <LifeBuoy />
+                <span className="sr-only">Aide</span>
+             </Button>
+             <Link href="/history">
+                <Button asChild variant="secondary" size="icon" title="Historique">
+                    
+                        <History />
+                        
+                </Button>
+            </Link>
+             <Link href="/admin">
+                <Button asChild variant="secondary" size="icon" title="Administration">
+                    
+                        <Settings />
+                        
+                </Button>
+            </Link>
+            <Button variant="destructive" size="icon" title="Déconnexion" onClick={handleLogout}>
+                <LogOut />
+                <span className="sr-only">Déconnexion</span>
+            </Button>
+           </div>
+        </div>
+      </header>
+      <main className="container mx-auto p-4 md:p-8">
+        {isLoading ? (
+          <p>Chargement des données sur les boissons...</p>
+        ) : (
+        <Tabs defaultValue="stock" className="w-full">
+          <TabsList className="grid w-full grid-cols-1 md:grid-cols-3 no-print">
+            <TabsTrigger value="stock">Stock Restant</TabsTrigger>
+            <TabsTrigger value="arrival">Arrivage</TabsTrigger>
+            <TabsTrigger value="calculations">Calculs Généraux</TabsTrigger>
+          </TabsList>
+          <TabsContent value="stock" className="printable-area">
+            <StockTab 
+              onStockUpdate={handleStockUpdate} 
+              boissons={boissons} 
+              stockQuantities={stockQuantities}
+              onQuantityChange={handleStockQuantitiesChange}
+            />
+          </TabsContent>
+          <TabsContent value="arrival" className="printable-area">
+            <ArrivalTab onArrivalUpdate={handleArrivalUpdate} boissons={boissons} />
+          </TabsContent>
+          <TabsContent value="calculations" className="printable-area">
+            <CalculationsTab
+              initialOldStock={oldStock}
+              setInitialOldStock={setOldStock}
+              arrivalTotal={arrivalTotal}
+              currentStockTotal={stockTotal}
+              onSaveResults={handleSaveResults}
+            />
+          </TabsContent>
+        </Tabs>
+        )}
+      </main>
+      <HelpDialog isOpen={isHelpOpen} setIsOpen={setIsHelpOpen} />
+    </>
+  );
+}
+
+    

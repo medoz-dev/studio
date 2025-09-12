@@ -47,7 +47,7 @@ export default function AdminClient() {
             <header className="bg-primary text-primary-foreground shadow-md">
                 <div className="container mx-auto py-6 text-center relative">
                     <div className="absolute top-1/2 -translate-y-1/2 left-4">
-                        <Link href="/">
+                        <Link href="/dashboard">
                             <Button variant="secondary" size="icon">
                                 <ArrowLeft />
                                 <span className="sr-only">Retour</span>
@@ -299,3 +299,5 @@ function BoissonFormDialog({ isOpen, setIsOpen, boisson, addBoisson, updateBoiss
         </Dialog>
     );
 }
+
+    

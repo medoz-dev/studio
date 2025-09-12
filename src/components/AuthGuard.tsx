@@ -12,7 +12,7 @@ import { Loader2 } from 'lucide-react';
 import { addDays } from 'date-fns';
 
 
-const publicPaths = ['/login', '/payment-status'];
+const publicPaths = ['/login', '/payment-status', '/'];
 const CONTACT_PHONE = "+22961170017";
 
 function SubscriptionBlockPage() {
@@ -74,7 +74,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     
     // L'utilisateur est connecté
     if (pathIsPublic) {
-      router.push('/');
+      router.push('/dashboard');
       setIsCheckingSubscription(false);
       return;
     }
@@ -121,7 +121,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const isChecking = authLoading || (user && isCheckingSubscription);
 
   // Écran de chargement pendant que l'authentification et la vérification de l'abonnement sont en cours
-  if (isChecking) {
+  if (isChecking && !publicPaths.includes(pathname)) {
     return (
         <div className="flex h-screen w-full items-center justify-center bg-background">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -143,11 +143,19 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   }
 
   // Si l'utilisateur est connecté
-  // Si l'abonnement est actif, on affiche l'application
-  if (isSubscriptionActive) {
+  // Si l'abonnement est actif, on affiche l'application (pages non-publiques)
+  if (isSubscriptionActive && !pathIsPublic) {
     return <>{children}</>;
   }
+  
+  // Si l'utilisateur est connecté mais tente d'accéder à une page publique, useEffect a déjà redirigé.
+  if (pathIsPublic) {
+      return null;
+  }
+
 
   // Si l'abonnement N'EST PAS actif, on affiche UNIQUEMENT la page de blocage.
   return <SubscriptionBlockPage />;
 }
+
+    

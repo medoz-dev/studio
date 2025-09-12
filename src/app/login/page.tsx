@@ -24,7 +24,7 @@ export default function LoginPage() {
     try {
       await signInWithEmailAndPassword(auth, email, password);
       toast({ title: "Succès", description: "Connexion réussie!" });
-      router.push('/');
+      router.push('/dashboard');
     } catch (error: any) {
       toast({
         title: "Erreur de connexion",
@@ -80,3 +80,5 @@ export default function LoginPage() {
     </main>
   );
 }
+
+    

@@ -1,280 +1,115 @@
 
-"use client";
-
-import { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { doc, getDocs, setDoc, onSnapshot, collection, query, orderBy, limit, deleteDoc, addDoc, writeBatch, getDoc, Timestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { useAuth } from "@/context/AuthContext";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import StockTab from "@/components/stock-tab";
-import ArrivalTab from "@/components/arrival-tab";
-import CalculationsTab from "@/components/calculations-tab";
-import { useToast } from "@/hooks/use-toast";
-import { useBoissons } from "@/hooks/useBoissons";
 import { Button } from "@/components/ui/button";
-import { Settings, History, LogOut, LifeBuoy } from "lucide-react";
-import { auth } from '@/lib/firebase';
-import type { StockItem } from "@/components/stock-tab";
-import type { ArrivalItem } from "@/components/arrival-tab";
-import type { Expense } from "@/components/calculations-tab";
-import type { CalculationData, HistoryEntry } from "@/lib/types";
-import { differenceInDays, format, addDays } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import HelpDialog from "@/components/HelpDialog";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CheckCircle, BarChart, DollarSign, Zap } from "lucide-react";
+import Link from "next/link";
+import Image from "next/image";
 
-
-function SubscriptionStatus({ subscriptionEndDate, creationDate }: { subscriptionEndDate: Date | null, creationDate: string | null }) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Normalize today to the beginning of the day
-
-    if (subscriptionEndDate) {
-        const endDate = new Date(subscriptionEndDate);
-        endDate.setHours(23, 59, 59, 999); // Normalize end date to the end of the day
-        const remainingDays = differenceInDays(endDate, today);
-        const formattedEndDate = format(endDate, 'd MMMM yyyy', { locale: fr });
-
-        if (remainingDays < 0) {
-            return <p className="text-sm mt-2 text-red-300 font-bold">Abonnement expiré.</p>;
-        }
-        if (remainingDays <= 5) {
-             return <p className="text-sm mt-2 text-yellow-300">Votre abonnement expire le {formattedEndDate} ({remainingDays} jour(s) restant(s)).</p>;
-        }
-        return <p className="text-sm mt-2">Actif jusqu'au {formattedEndDate} ({remainingDays} jours restants).</p>;
-    }
-    
-    if (creationDate) {
-        const trialEndDate = addDays(new Date(creationDate), 5);
-        trialEndDate.setHours(23, 59, 59, 999);
-        const remainingDays = differenceInDays(trialEndDate, today);
-        const formattedEndDate = format(trialEndDate, 'd MMMM yyyy', { locale: fr });
-
-         if (remainingDays < 0) {
-            return <p className="text-sm mt-2 text-red-300 font-bold">Période d'essai terminée.</p>;
-        }
-        return <p className="text-sm mt-2 text-yellow-300">Essai gratuit jusqu'au {formattedEndDate} ({remainingDays} jour(s) restant(s)).</p>;
-    }
-
-    return null; // Return null if there's no date info at all
-}
-
-
-export default function Home() {
-  const [stockTotal, setStockTotal] = useState(0);
-  const [stockDetails, setStockDetails] = useState<StockItem[]>([]);
-  const [arrivalTotal, setArrivalTotal] = useState(0);
-  const [arrivalDetails, setArrivalDetails] = useState<ArrivalItem[]>([]);
-  const [oldStock, setOldStock] = useState(0);
-  const [stockQuantities, setStockQuantities] = useState<Record<string, number>>({});
-  const { toast } = useToast();
-  const { boissons, isLoading } = useBoissons();
-  const { user } = useAuth();
-  const [userName, setUserName] = useState('');
-  const [subscriptionEndDate, setSubscriptionEndDate] = useState<Date | null>(null);
-  const [isHelpOpen, setIsHelpOpen] = useState(false);
-
-
-  useEffect(() => {
-    if (!user) return;
-
-    // Listener for user's data (name and subscription)
-    const userDocRef = doc(db, 'users', user.uid);
-    const unsubUser = onSnapshot(userDocRef, (docSnap) => {
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            setUserName(data.name || '');
-            if (data.finAbonnement && data.finAbonnement instanceof Timestamp) {
-                setSubscriptionEndDate(data.finAbonnement.toDate());
-            } else {
-                setSubscriptionEndDate(null);
-            }
-        }
-    });
-
-
-    // Listener for current stock quantities
-    const quantitiesDocRef = doc(db, 'users', user.uid, 'inventoryState', 'stockQuantities');
-    const unsubQuantities = onSnapshot(quantitiesDocRef, (doc) => {
-      if (doc.exists()) {
-        setStockQuantities(doc.data() || {});
-      }
-    });
-
-    // Listener for all arrivals
-    const arrivalsColRef = collection(db, 'users', user.uid, 'currentArrivals');
-    const unsubArrivals = onSnapshot(arrivalsColRef, (snapshot) => {
-      const arrivalsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ArrivalItem));
-      const total = arrivalsData.reduce((acc, arrival) => acc + arrival.total, 0);
-      setArrivalTotal(total);
-      setArrivalDetails(arrivalsData);
-    });
-    
-    // Get latest stock value from history to set as oldStock
-    const historyColRef = collection(db, 'users', user.uid, 'history');
-    const q = query(historyColRef, orderBy('date', 'desc'), limit(1));
-    const unsubHistory = onSnapshot(q, (snapshot) => {
-        if (!snapshot.empty) {
-            const lastEntry = snapshot.docs[0].data() as HistoryEntry;
-            setOldStock(lastEntry.currentStockTotal || 0);
-        } else {
-            setOldStock(0);
-        }
-    });
-
-
-    return () => {
-      unsubUser();
-      unsubQuantities();
-      unsubArrivals();
-      unsubHistory();
-    };
-  }, [user]);
-
-  const handleStockQuantitiesChange = useCallback(async (quantities: Record<string, number>) => {
-    setStockQuantities(quantities);
-    if (user) {
-      const docRef = doc(db, 'users', user.uid, 'inventoryState', 'stockQuantities');
-      await setDoc(docRef, quantities, { merge: true });
-    }
-  }, [user]);
-
-  const handleStockUpdate = useCallback((total: number, details: StockItem[]) => {
-      setStockTotal(total);
-      setStockDetails(details);
-  }, []);
-
-  const handleArrivalUpdate = useCallback((total: number, details: ArrivalItem[]) => {
-      setArrivalTotal(total);
-      setArrivalDetails(details);
-  }, []);
-
-
-  const handleSaveResults = async (calculationData: CalculationData, expenses: Expense[]) => {
-    if (!user) {
-      toast({ title: "Erreur", description: "Vous devez être connecté.", variant: "destructive" });
-      return;
-    }
-    try {
-        const historyEntry: Omit<HistoryEntry, 'id'> = {
-            ...calculationData,
-            stockDetails: stockDetails,
-            arrivalDetails: arrivalDetails,
-            expenseDetails: expenses,
-        };
-
-        const batch = writeBatch(db);
-
-        // Add to history collection
-        const historyColRef = collection(db, 'users', user.uid, 'history');
-        const newHistoryDoc = doc(historyColRef);
-        batch.set(newHistoryDoc, historyEntry);
-
-        // Clear current arrivals by deleting all documents in the collection
-        const arrivalsColRef = collection(db, 'users', user.uid, 'currentArrivals');
-        const arrivalsSnapshot = await getDocs(arrivalsColRef);
-        arrivalsSnapshot.forEach((doc) => {
-            batch.delete(doc.ref);
-        });
-        
-        // Clear stock quantities
-        const quantitiesDocRef = doc(db, 'users', user.uid, 'inventoryState', 'stockQuantities');
-        batch.set(quantitiesDocRef, {});
-
-        // Commit all batched writes at once
-        await batch.commit();
-
-        toast({
-            title: "Succès!",
-            description: `Résultats pour ${calculationData.managerName} enregistrés dans l'historique!`,
-        });
-
-        // State will be reset by listeners
-    } catch (error) {
-        console.error("Failed to save results to Firestore", error);
-        toast({
-            title: "Erreur",
-            description: "Impossible d'enregistrer les résultats.",
-            variant: "destructive",
-        });
-    }
-  };
-  
-  const handleLogout = async () => {
-    await auth.signOut();
-  }
-
+export default function LandingPage() {
   return (
-    <>
-      <header className="bg-primary text-primary-foreground shadow-md no-print">
-        <div className="container mx-auto py-6 text-center relative">
-          <h1 className="text-4xl font-bold font-headline">Inventaire Pro</h1>
-          <p className="text-lg mt-2">Bienvenue, {userName || user?.email}</p>
-          <SubscriptionStatus subscriptionEndDate={subscriptionEndDate} creationDate={user?.metadata.creationTime ?? null} />
-           <div className="absolute top-1/2 -translate-y-1/2 right-4 flex gap-2">
-             <Button variant="secondary" size="icon" title="Aide et Infos" onClick={() => setIsHelpOpen(true)}>
-                <LifeBuoy />
-                <span className="sr-only">Aide</span>
-             </Button>
-             <Link href="/history">
-                <Button asChild variant="secondary" size="icon" title="Historique">
-                    
-                        <History />
-                        
-                </Button>
-            </Link>
-             <Link href="/admin">
-                <Button asChild variant="secondary" size="icon" title="Administration">
-                    
-                        <Settings />
-                        
-                </Button>
-            </Link>
-            <Button variant="destructive" size="icon" title="Déconnexion" onClick={handleLogout}>
-                <LogOut />
-                <span className="sr-only">Déconnexion</span>
-            </Button>
-           </div>
+    <div className="flex flex-col min-h-screen bg-background">
+      <header className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex h-20 items-center justify-between">
+          <Link href="/" className="flex items-center gap-2">
+            <BarChart className="h-8 w-8 text-primary" />
+            <span className="text-2xl font-bold text-foreground">Inventaire Pro</span>
+          </Link>
+          <Link href="/login">
+            <Button>Se Connecter</Button>
+          </Link>
         </div>
       </header>
-      <main className="container mx-auto p-4 md:p-8">
-        {isLoading ? (
-          <p>Chargement des données sur les boissons...</p>
-        ) : (
-        <Tabs defaultValue="stock" className="w-full">
-          <TabsList className="grid w-full grid-cols-1 md:grid-cols-3 no-print">
-            <TabsTrigger value="stock">Stock Restant</TabsTrigger>
-            <TabsTrigger value="arrival">Arrivage</TabsTrigger>
-            <TabsTrigger value="calculations">Calculs Généraux</TabsTrigger>
-          </TabsList>
-          <TabsContent value="stock" className="printable-area">
-            <StockTab 
-              onStockUpdate={handleStockUpdate} 
-              boissons={boissons} 
-              stockQuantities={stockQuantities}
-              onQuantityChange={handleStockQuantitiesChange}
-            />
-          </TabsContent>
-          <TabsContent value="arrival" className="printable-area">
-            <ArrivalTab onArrivalUpdate={handleArrivalUpdate} boissons={boissons} />
-          </TabsContent>
-          <TabsContent value="calculations" className="printable-area">
-            <CalculationsTab
-              initialOldStock={oldStock}
-              setInitialOldStock={setOldStock}
-              arrivalTotal={arrivalTotal}
-              currentStockTotal={stockTotal}
-              onSaveResults={handleSaveResults}
-            />
-          </TabsContent>
-        </Tabs>
-        )}
+
+      <main className="flex-1">
+        {/* Hero Section */}
+        <section className="w-full py-20 md:py-32 lg:py-40 bg-primary/5">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 grid gap-8 md:grid-cols-2 md:items-center">
+            <div className="space-y-6">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-primary">
+                La gestion de stock, enfin simple.
+              </h1>
+              <p className="max-w-xl text-lg text-muted-foreground">
+                Arrêtez de perdre du temps avec les cahiers et les calculatrices. Inventaire Pro automatise vos inventaires, détecte les manquants et vous donne le contrôle total sur votre bar ou restaurant.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Link href="/login">
+                  <Button size="lg" className="w-full sm:w-auto">Commencer l'Essai Gratuit</Button>
+                </Link>
+              </div>
+            </div>
+            <div className="flex justify-center">
+                <Image 
+                    src="https://picsum.photos/seed/inventory/600/400"
+                    alt="Tableau de bord de l'application Inventaire Pro"
+                    width={600}
+                    height={400}
+                    className="rounded-xl shadow-2xl"
+                    data-ai-hint="dashboard analytics"
+                />
+            </div>
+          </div>
+        </section>
+
+        {/* Features Section */}
+        <section id="features" className="w-full py-20 md:py-24 lg:py-28">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
+            <div className="text-center space-y-4">
+              <h2 className="text-3xl md:text-4xl font-bold">Pourquoi choisir Inventaire Pro ?</h2>
+              <p className="max-w-2xl mx-auto text-muted-foreground">
+                Conçu par un développeur qui connaît les réalités du terrain, pour les gérants qui veulent avancer.
+              </p>
+            </div>
+            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+              <FeatureCard
+                icon={<Zap className="h-8 w-8 text-primary" />}
+                title="Inventaire Rapide"
+                description="Saisissez votre stock en quelques minutes. Le système calcule automatiquement la valeur totale."
+              />
+              <FeatureCard
+                icon={<DollarSign className="h-8 w-8 text-primary" />}
+                title="Détection des Manquants"
+                description="Le système compare les ventes théoriques et l'argent encaissé pour identifier les surplus ou les manquants."
+              />
+              <FeatureCard
+                icon={<BarChart className="h-8 w-8 text-primary" />}
+                title="Historique Complet"
+                description="Accédez à tous vos anciens inventaires en un clic pour suivre vos performances sur le long terme."
+              />
+              <FeatureCard
+                icon={<CheckCircle className="h-8 w-8 text-primary" />}
+                title="Simple et Fiable"
+                description="Pas de fonctionnalités compliquées. Juste un outil efficace qui fonctionne, pensé pour vous."
+              />
+            </div>
+          </div>
+        </section>
+
       </main>
-      <HelpDialog isOpen={isHelpOpen} setIsOpen={setIsHelpOpen} />
-    </>
+
+      <footer className="bg-primary/5 py-8">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center text-muted-foreground">
+          <p>&copy; {new Date().getFullYear()} Inventaire Pro. Tous droits réservés.</p>
+           <p className="text-sm mt-1">Conçu avec ❤️ par Melchior Codex.</p>
+        </div>
+      </footer>
+    </div>
   );
 }
 
-    
+function FeatureCard({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) {
+  return (
+    <Card className="text-center p-6 shadow-lg hover:shadow-xl transition-shadow">
+      <CardHeader className="flex justify-center items-center pb-4">
+        <div className="bg-primary/10 p-4 rounded-full">
+            {icon}
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        <h3 className="text-xl font-bold">{title}</h3>
+        <p className="text-muted-foreground">{description}</p>
+      </CardContent>
+    </Card>
+  );
+}
 
     
