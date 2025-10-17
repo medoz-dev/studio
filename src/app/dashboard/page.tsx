@@ -41,7 +41,7 @@ function SubscriptionStatus({ subscriptionEndDate, creationDate }: { subscriptio
     }
     
     if (creationDate) {
-        const trialEndDate = addDays(new Date(creationDate), 5);
+        const trialEndDate = addDays(new Date(creationDate), 30);
         if(isBefore(today, trialEndDate)) {
             const remainingDays = differenceInDays(trialEndDate, today);
             const formattedEndDate = format(trialEndDate, 'd MMMM yyyy', { locale: fr });

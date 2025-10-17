@@ -97,7 +97,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       // Si pas d'abonnement actif, on vérifie la période d'essai (fallback)
       if (!isActive && user.metadata.creationTime) {
         const creationTime = new Date(user.metadata.creationTime);
-        const trialEndDate = addDays(creationTime, 5);
+        const trialEndDate = addDays(creationTime, 30);
         if (isBefore(today, trialEndDate)) {
           isActive = true;
         }
@@ -155,5 +155,3 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   // Si l'abonnement N'EST PAS actif, on affiche UNIQUEMENT la page de blocage.
   return <SubscriptionBlockPage />;
 }
-
-    

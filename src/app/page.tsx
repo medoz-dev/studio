@@ -35,18 +35,18 @@ export default function LandingPage() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link href="/login">
-                  <Button size="lg" className="w-full sm:w-auto">Commencer l'Essai Gratuit de 5 jours</Button>
+                  <Button size="lg" className="w-full sm:w-auto">Commencer l'Essai Gratuit de 30 jours</Button>
                 </Link>
               </div>
             </div>
             <div className="flex justify-center">
                 <Image 
-                    src="https://picsum.photos/seed/inventory/600/500"
-                    alt="Tableau de bord de l'application Inventaire Pro"
+                    src="https://picsum.photos/seed/bar counter/600/500"
+                    alt="Comptoir de bar avec des cocktails"
                     width={600}
                     height={500}
                     className="rounded-xl shadow-2xl"
-                    data-ai-hint="dashboard analytics"
+                    data-ai-hint="bar cocktails"
                 />
             </div>
           </div>
@@ -191,13 +191,13 @@ export default function LandingPage() {
                         <AccordionItem value="item-2">
                             <AccordionTrigger>Comment fonctionne la période d'essai ?</AccordionTrigger>
                             <AccordionContent>
-                                Dès votre inscription, vous bénéficiez de 5 jours d'essai gratuit avec un accès complet à toutes les fonctionnalités. Aucune carte de crédit n'est requise.
+                                Dès votre inscription, vous bénéficiez de 30 jours d'essai gratuit avec un accès complet à toutes les fonctionnalités. Aucune carte de crédit n'est requise.
                             </AccordionContent>
                         </AccordionItem>
                          <AccordionItem value="item-3">
                             <AccordionTrigger>Que se passe-t-il après la période d'essai ?</AccordionTrigger>
                             <AccordionContent>
-                                Après les 5 jours, votre accès sera limité. Pour continuer à utiliser l'application, vous devrez souscrire à notre abonnement mensuel en nous contactant directement.
+                                Après les 30 jours, votre accès sera limité. Pour continuer à utiliser l'application, vous devrez souscrire à notre abonnement mensuel en nous contactant directement.
                             </AccordionContent>
                         </AccordionItem>
                         <AccordionItem value="item-4">
