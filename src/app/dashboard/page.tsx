@@ -22,6 +22,7 @@ import type { CalculationData, HistoryEntry } from "@/lib/types";
 import { differenceInDays, format, addDays, isBefore } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import HelpDialog from "@/components/HelpDialog";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 
 function SubscriptionStatus({ subscriptionEndDate, creationDate }: { subscriptionEndDate: Date | null, creationDate: string | null }) {
@@ -214,6 +215,7 @@ export default function DashboardPage() {
             </Link>
           </div>
            <div className="absolute top-1/2 -translate-y-1/2 right-4 flex gap-2">
+             <ThemeToggle />
              <Button variant="secondary" size="icon" title="Aide et Infos" onClick={() => setIsHelpOpen(true)}>
                 <LifeBuoy />
                 <span className="sr-only">Aide</span>
@@ -276,3 +278,4 @@ export default function DashboardPage() {
     
 
     
+
