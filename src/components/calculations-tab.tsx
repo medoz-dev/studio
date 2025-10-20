@@ -22,7 +22,17 @@ interface CalculationsTabProps {
     setInitialOldStock: (value: number) => void;
     arrivalTotal: number;
     currentStockTotal: number;
-    onSaveResults: (calculationData: CalculationData, expenses: Expense[]) => void;
+    onSaveResults: (calculationData: CalculationData) => void;
+    calculationDate: string;
+    setCalculationDate: (date: string) => void;
+    managerName: string;
+    setManagerName: (name: string) => void;
+    encaissement: number;
+    setEncaissement: (value: number) => void;
+    expenses: Expense[];
+    setExpenses: (expenses: Expense[]) => void;
+    especeGerant: number;
+    setEspeceGerant: (value: number) => void;
 }
 
 const SummaryItem = ({ label, value }: { label: string, value: string }) => (
@@ -32,28 +42,37 @@ const SummaryItem = ({ label, value }: { label: string, value: string }) => (
     </div>
 );
 
-export default function CalculationsTab({ initialOldStock, setInitialOldStock, arrivalTotal, currentStockTotal, onSaveResults }: CalculationsTabProps) {
-    const [calculationDate, setCalculationDate] = useState(new Date().toISOString().split('T')[0]);
-    const [managerName, setManagerName] = useState('');
+export default function CalculationsTab({
+    initialOldStock,
+    setInitialOldStock,
+    arrivalTotal,
+    currentStockTotal,
+    onSaveResults,
+    calculationDate,
+    setCalculationDate,
+    managerName,
+    setManagerName,
+    encaissement,
+    setEncaissement,
+    expenses,
+    setExpenses,
+    especeGerant,
+    setEspeceGerant
+}: CalculationsTabProps) {
     const [oldStockInput, setOldStockInput] = useState(initialOldStock.toString());
-    const [encaissement, setEncaissement] = useState(0);
-    const [expenses, setExpenses] = useState<Expense[]>([]);
     const [newExpenseMotif, setNewExpenseMotif] = useState('');
     const [newExpenseAmount, setNewExpenseAmount] = useState('');
-    const [especeGerant, setEspeceGerant] = useState(0);
     const [showFinalResult, setShowFinalResult] = useState(false);
     const { toast } = useToast();
-
 
     useEffect(() => {
         setOldStockInput(initialOldStock.toString());
     }, [initialOldStock]);
 
+    // Reset calculation when major totals change from parent
     useEffect(() => {
-        // Reset calculation when totals change
         setShowFinalResult(false);
-    }, [initialOldStock, arrivalTotal, currentStockTotal, encaissement, expenses, especeGerant]);
-
+    }, [initialOldStock, arrivalTotal, currentStockTotal]);
 
     const handleUpdateOldStock = () => {
         const newValue = Number(oldStockInput);
@@ -114,13 +133,7 @@ export default function CalculationsTab({ initialOldStock, setInitialOldStock, a
             especeGerant,
             finalResult
         };
-        onSaveResults(calculationData, expenses);
-
-        // Reset fields for next session, but keep old stock which is now the current stock
-        setManagerName('');
-        setEncaissement(0);
-        setExpenses([]);
-        setEspeceGerant(0);
+        onSaveResults(calculationData);
         setShowFinalResult(false);
     }
     
@@ -199,11 +212,11 @@ export default function CalculationsTab({ initialOldStock, setInitialOldStock, a
                 <Card>
                     <CardHeader><CardTitle>Dépenses</CardTitle></CardHeader>
                     <CardContent>
-                        <div className="flex flex-col md:flex-row gap-2 mb-4 no-print">
+                        <form onSubmit={(e) => { e.preventDefault(); addExpense(); }} className="flex flex-col md:flex-row gap-2 mb-4 no-print">
                             <Input type="text" value={newExpenseMotif} onChange={e => setNewExpenseMotif(e.target.value)} placeholder="Motif de la dépense..." />
                             <Input type="number" value={newExpenseAmount} onChange={e => setNewExpenseAmount(e.target.value)} placeholder="Montant..." className="md:w-40" />
-                            <Button onClick={addExpense} className="shrink-0">Ajouter</Button>
-                        </div>
+                            <Button type="submit" className="shrink-0">Ajouter</Button>
+                        </form>
                         <div className="space-y-2 mb-4 max-h-40 overflow-y-auto pr-2">
                             {expenses.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Aucune dépense ajoutée.</p>}
                             {expenses.map(exp => (
@@ -230,7 +243,7 @@ export default function CalculationsTab({ initialOldStock, setInitialOldStock, a
                         <div className="flex gap-2 items-end">
                             <div className="flex-grow">
                                 <Label htmlFor="especeGerant">Espèce disponible chez le gérant</Label>
-                                <Input type="number" id="especeGerant" value={especeGerant || ''} onChange={(e) => setEspeceGerant(Number(e.target.value))} placeholder="Entrez le montant..."/>
+                                <Input type="number" id="especeGerant" value={especeGerant || ''} onChange={(e) => setEspeceGerant(Number(e.target.value))}/>
                             </div>
                             <Button onClick={handleCalculateFinal} className="no-print">Calculer</Button>
                         </div>

@@ -70,6 +70,13 @@ export default function DashboardPage() {
   const [subscriptionEndDate, setSubscriptionEndDate] = useState<Date | null>(null);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
 
+  // State for CalculationsTab lifted up to DashboardPage
+  const [calculationDate, setCalculationDate] = useState(new Date().toISOString().split('T')[0]);
+  const [managerName, setManagerName] = useState('');
+  const [encaissement, setEncaissement] = useState(0);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [especeGerant, setEspeceGerant] = useState(0);
+
 
   useEffect(() => {
     if (!user) return;
@@ -146,7 +153,7 @@ export default function DashboardPage() {
   }, []);
 
 
-  const handleSaveResults = async (calculationData: CalculationData, expenses: Expense[]) => {
+  const handleSaveResults = async (calculationData: CalculationData) => {
     if (!user) {
       toast({ title: "Erreur", description: "Vous devez être connecté.", variant: "destructive" });
       return;
@@ -177,15 +184,19 @@ export default function DashboardPage() {
         const quantitiesDocRef = doc(db, 'users', user.uid, 'inventoryState', 'stockQuantities');
         batch.set(quantitiesDocRef, {});
 
-        // Commit all batched writes at once
         await batch.commit();
+
+        // Reset state after saving
+        setManagerName('');
+        setEncaissement(0);
+        setExpenses([]);
+        setEspeceGerant(0);
 
         toast({
             title: "Succès!",
             description: `Résultats pour ${calculationData.managerName} enregistrés dans l'historique!`,
         });
 
-        // State will be reset by listeners
     } catch (error) {
         console.error("Failed to save results to Firestore", error);
         toast({
@@ -265,6 +276,16 @@ export default function DashboardPage() {
               arrivalTotal={arrivalTotal}
               currentStockTotal={stockTotal}
               onSaveResults={handleSaveResults}
+              calculationDate={calculationDate}
+              setCalculationDate={setCalculationDate}
+              managerName={managerName}
+              setManagerName={setManagerName}
+              encaissement={encaissement}
+              setEncaissement={setEncaissement}
+              expenses={expenses}
+              setExpenses={setExpenses}
+              especeGerant={especeGerant}
+              setEspeceGerant={setEspeceGerant}
             />
           </TabsContent>
         </Tabs>
@@ -274,12 +295,3 @@ export default function DashboardPage() {
     </>
   );
 }
-
-    
-
-    
-
-
-
-
-    
