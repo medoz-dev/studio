@@ -242,7 +242,7 @@ export default function DashboardPage() {
           <p>Chargement des données sur les boissons...</p>
         ) : (
         <Tabs defaultValue="stock" className="w-full">
-          <TabsList className="grid w-full grid-cols-1 md:grid-cols-3 no-print">
+          <TabsList className="grid w-full grid-cols-1 h-auto md:h-10 md:grid-cols-3 no-print">
             <TabsTrigger value="stock">Stock Restant</TabsTrigger>
             <TabsTrigger value="arrival">Arrivage</TabsTrigger>
             <TabsTrigger value="calculations">Calculs Généraux</TabsTrigger>
@@ -280,3 +280,6 @@ export default function DashboardPage() {
     
 
 
+
+
+    

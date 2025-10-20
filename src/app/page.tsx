@@ -3,7 +3,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { CheckCircle, BarChart, DollarSign, Zap, FilePlus, PackageSearch, Calculator, Archive } from "lucide-react";
+import { CheckCircle, BarChart, DollarSign, Zap, FilePlus, PackageSearch, Calculator, Archive, LogIn } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -11,13 +11,16 @@ export default function LandingPage() {
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
       <header className="container mx-auto px-4 sm:px-6 lg:px-8 sticky top-0 z-50 bg-background/80 backdrop-blur-sm">
-        <div className="flex h-20 items-center justify-between">
+        <div className="flex h-20 items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-2">
             <BarChart className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-bold">Inventaire Pro</span>
+            <span className="text-xl md:text-2xl font-bold">Inventaire Pro</span>
           </Link>
-          <Link href="/login">
-            <Button>Se Connecter / Essai Gratuit</Button>
+          <Link href="/login" className="shrink-0">
+            <Button>
+              <LogIn className="md:mr-2" />
+              <span className="hidden md:inline">Se Connecter / Essai Gratuit</span>
+            </Button>
           </Link>
         </div>
       </header>
@@ -41,12 +44,12 @@ export default function LandingPage() {
             </div>
             <div className="flex justify-center">
                 <Image 
-                    src="https://picsum.photos/seed/bar%20restaurant%20moderne/600/500"
+                    src="https://picsum.photos/seed/bar%20restaurant%20whisky/600/500"
                     alt="Personne travaillant sur un ordinateur portable dans un bar-restaurant chaleureux"
                     width={600}
                     height={500}
                     className="rounded-xl shadow-2xl"
-                    data-ai-hint="bar restaurant moderne"
+                    data-ai-hint="bar restaurant whisky"
                 />
             </div>
           </div>
@@ -185,7 +188,7 @@ export default function LandingPage() {
                         <AccordionItem value="item-1">
                             <AccordionTrigger>L'application est-elle difficile à utiliser ?</AccordionTrigger>
                             <AccordionContent>
-                                Non, pas du tout. Inventaire Pro a été conçu pour être extrêmement simple et intuitif. Si vous savez utiliser un ordinateur, vous saurez utiliser notre application en quelques minutes.
+                                Non, pas du tout. Inventaire Pro a été conçu pour être extrêmement simple et intuitif. Si vous savez utiliser un smartphone ou un ordinateur, vous saurez utiliser notre application en quelques minutes.
                             </AccordionContent>
                         </AccordionItem>
                         <AccordionItem value="item-2">
@@ -268,3 +271,6 @@ function StepCard({ icon, step, title, description }: { icon: React.ReactNode, s
         </div>
     );
 }
+
+
+    
