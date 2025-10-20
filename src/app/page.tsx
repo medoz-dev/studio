@@ -44,12 +44,12 @@ export default function LandingPage() {
             </div>
             <div className="flex justify-center">
                 <Image 
-                    src="https://picsum.photos/seed/bar%20restaurant%20whisky/600/500"
+                    src="https://picsum.photos/seed/business%20owner%20tablet/600/500"
                     alt="Personne travaillant sur un ordinateur portable dans un bar-restaurant chaleureux"
                     width={600}
                     height={500}
                     className="rounded-xl shadow-2xl"
-                    data-ai-hint="bar restaurant whisky"
+                    data-ai-hint="business owner tablet"
                 />
             </div>
           </div>
@@ -148,28 +148,29 @@ export default function LandingPage() {
                  <div className="text-center space-y-4 mb-12">
                     <h2 className="text-3xl md:text-4xl font-bold">Un tarif simple et transparent</h2>
                     <p className="max-w-2xl mx-auto text-muted-foreground">
-                       Testez gratuitement, puis continuez avec un abonnement qui garantit les mises à jour et le support.
+                       Testez gratuitement pendant 30 jours, puis continuez avec un abonnement mensuel accessible pour garantir les mises à jour et le support.
                     </p>
                 </div>
                 <div className="flex justify-center">
                     <Card className="max-w-md w-full shadow-lg">
-                        <CardHeader>
-                            <CardTitle className="text-center text-2xl">Abonnement Mensuel</CardTitle>
-                            <CardDescription className="text-center">Accès complet. Support prioritaire.</CardDescription>
+                        <CardHeader className="items-center text-center">
+                            <CardTitle className="text-2xl">Abonnement Mensuel</CardTitle>
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-5xl font-bold">5000</span>
+                                <span className="text-xl text-muted-foreground">FCFA / mois</span>
+                            </div>
                         </CardHeader>
-                        <CardContent className="text-center">
-                            <p className="text-5xl font-bold mb-2">Contactez-nous</p>
-                            <p className="text-muted-foreground">Pour un tarif adapté et une mise en place rapide.</p>
+                        <CardContent>
                              <ul className="mt-6 text-left space-y-3">
                                 <li className="flex items-center gap-3"><CheckCircle className="h-5 w-5 text-green-500" /> Gestion illimitée des boissons</li>
                                 <li className="flex items-center gap-3"><CheckCircle className="h-5 w-5 text-green-500" /> Historique complet des inventaires</li>
-                                <li className="flex items-center gap-3"><CheckCircle className="h-5 w-5 text-green-500" /> Support technique par WhatsApp & Email</li>
-                                <li className="flex items-center gap-3"><CheckCircle className="h-5 w-5 text-green-500" /> Mises à jour régulières</li>
+                                <li className="flex items-center gap-3"><CheckCircle className="h-5 w-5 text-green-500" /> Support technique prioritaire par WhatsApp & Email</li>
+                                <li className="flex items-center gap-3"><CheckCircle className="h-5 w-5 text-green-500" /> Mises à jour et nouvelles fonctionnalités incluses</li>
                             </ul>
                         </CardContent>
                         <CardFooter>
                             <a href="https://wa.me/22961170017" target="_blank" rel="noopener noreferrer" className="w-full">
-                                <Button className="w-full" size="lg">Obtenir un devis sur WhatsApp</Button>
+                                <Button className="w-full" size="lg">Souscrire via WhatsApp</Button>
                             </a>
                         </CardFooter>
                     </Card>
@@ -271,6 +272,3 @@ function StepCard({ icon, step, title, description }: { icon: React.ReactNode, s
         </div>
     );
 }
-
-
-    

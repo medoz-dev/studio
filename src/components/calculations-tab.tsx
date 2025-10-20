@@ -199,10 +199,10 @@ export default function CalculationsTab({ initialOldStock, setInitialOldStock, a
                 <Card>
                     <CardHeader><CardTitle>Dépenses</CardTitle></CardHeader>
                     <CardContent>
-                        <div className="flex gap-2 mb-4 no-print">
+                        <div className="flex flex-col md:flex-row gap-2 mb-4 no-print">
                             <Input type="text" value={newExpenseMotif} onChange={e => setNewExpenseMotif(e.target.value)} placeholder="Motif de la dépense..." />
-                            <Input type="number" value={newExpenseAmount} onChange={e => setNewExpenseAmount(e.target.value)} placeholder="Montant..." className="w-40" />
-                            <Button onClick={addExpense}>Ajouter</Button>
+                            <Input type="number" value={newExpenseAmount} onChange={e => setNewExpenseAmount(e.target.value)} placeholder="Montant..." className="md:w-40" />
+                            <Button onClick={addExpense} className="shrink-0">Ajouter</Button>
                         </div>
                         <div className="space-y-2 mb-4 max-h-40 overflow-y-auto pr-2">
                             {expenses.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Aucune dépense ajoutée.</p>}
