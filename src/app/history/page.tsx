@@ -15,6 +15,8 @@ import { ArrowLeft, Eye, Trash2 } from "lucide-react";
 import { HistoryEntry } from "@/lib/types";
 import { Separator } from "@/components/ui/separator";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const SummaryItem = ({ label, value, className = '' }: { label: string, value: string, className?: string }) => (
     <div className={`flex justify-between items-center py-2 ${className}`}>
@@ -28,6 +30,8 @@ export default function HistoryPage() {
     const [selectedEntry, setSelectedEntry] = useState<HistoryEntry | null>(null);
     const { user } = useAuth();
     const [isLoading, setIsLoading] = useState(true);
+    const [entryToDelete, setEntryToDelete] = useState<HistoryEntry | null>(null);
+    const [deleteInput, setDeleteInput] = useState("");
 
     useEffect(() => {
         if (!user) {
@@ -51,6 +55,8 @@ export default function HistoryPage() {
         if (!user) return;
         const docRef = doc(db, 'users', user.uid, 'history', id);
         await deleteDoc(docRef);
+        setEntryToDelete(null); // Close dialog on success
+        setDeleteInput("");
     };
     
     return (
@@ -103,25 +109,9 @@ export default function HistoryPage() {
                                                     <Button variant="outline" size="sm" onClick={() => setSelectedEntry(entry)}>
                                                         <Eye className="mr-2 h-4 w-4" /> Détails
                                                     </Button>
-                                                    <AlertDialog>
-                                                        <AlertDialogTrigger asChild>
-                                                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </Button>
-                                                        </AlertDialogTrigger>
-                                                        <AlertDialogContent>
-                                                            <AlertDialogHeader>
-                                                                <AlertDialogTitle>Êtes-vous sûr?</AlertDialogTitle>
-                                                                <AlertDialogDescription>
-                                                                    Cette action est irréversible et supprimera définitivement cet enregistrement de l'historique.
-                                                                </AlertDialogDescription>
-                                                            </AlertDialogHeader>
-                                                            <AlertDialogFooter>
-                                                                <AlertDialogCancel>Annuler</AlertDialogCancel>
-                                                                <AlertDialogAction onClick={() => handleDelete(entry.id)}>Supprimer</AlertDialogAction>
-                                                            </AlertDialogFooter>
-                                                        </AlertDialogContent>
-                                                    </AlertDialog>
+                                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => { setDeleteInput(""); setEntryToDelete(entry); }}>
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
                                                 </TableCell>
                                             </TableRow>
                                         ))}
@@ -132,6 +122,37 @@ export default function HistoryPage() {
                     </CardContent>
                 </Card>
             </main>
+
+            <AlertDialog open={!!entryToDelete} onOpenChange={(isOpen) => !isOpen && setEntryToDelete(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Êtes-vous absolument sûr?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Cette action est irréversible et supprimera définitivement cet enregistrement. Pour confirmer, veuillez taper <strong className="text-foreground">DELETE</strong> ci-dessous.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <div className="py-2">
+                        <Label htmlFor="delete-confirm" className="sr-only">Taper DELETE pour confirmer</Label>
+                        <Input
+                            id="delete-confirm"
+                            value={deleteInput}
+                            onChange={(e) => setDeleteInput(e.target.value)}
+                            placeholder='DELETE'
+                            autoComplete="off"
+                        />
+                    </div>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setDeleteInput("")}>Annuler</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={() => entryToDelete && handleDelete(entryToDelete.id)}
+                            disabled={deleteInput !== 'DELETE'}
+                        >
+                            Supprimer
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
             <HistoryDetailsDialog
                 isOpen={!!selectedEntry}
                 setIsOpen={() => setSelectedEntry(null)}
