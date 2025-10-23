@@ -44,12 +44,12 @@ export default function LandingPage() {
             </div>
             <div className="flex justify-center">
                 <Image 
-                    src="https://picsum.photos/seed/business%20owner%20tablet/600/500"
+                    src="https://picsum.photos/seed/bar%20restaurant/600/500"
                     alt="Personne travaillant sur un ordinateur portable dans un bar-restaurant chaleureux"
                     width={600}
                     height={500}
                     className="rounded-xl shadow-2xl"
-                    data-ai-hint="business owner tablet"
+                    data-ai-hint="bar restaurant"
                 />
             </div>
           </div>
