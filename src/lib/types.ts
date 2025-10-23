@@ -24,4 +24,7 @@ export interface HistoryEntry extends CalculationData {
     stockDetails: StockItem[];
     arrivalDetails: ArrivalItem[];
     expenseDetails: Expense[];
+    modifieLe?: string; // Optional: ISO date string for modification tracking
 }
+
+    

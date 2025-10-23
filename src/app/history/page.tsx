@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { collection, onSnapshot, query, orderBy, doc, deleteDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -11,12 +12,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter as TableFoot } from "@/components/ui/table";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { ArrowLeft, Eye, Trash2 } from "lucide-react";
+import { ArrowLeft, Eye, Trash2, Pencil } from "lucide-react";
 import { HistoryEntry } from "@/lib/types";
 import { Separator } from "@/components/ui/separator";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+
 
 const SummaryItem = ({ label, value, className = '' }: { label: string, value: string, className?: string }) => (
     <div className={`flex justify-between items-center py-2 ${className}`}>
@@ -32,6 +36,8 @@ export default function HistoryPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [entryToDelete, setEntryToDelete] = useState<HistoryEntry | null>(null);
     const [deleteInput, setDeleteInput] = useState("");
+    const router = useRouter();
+    const { toast } = useToast();
 
     useEffect(() => {
         if (!user) {
@@ -46,6 +52,9 @@ export default function HistoryPage() {
             const historyData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as HistoryEntry));
             setHistory(historyData);
             setIsLoading(false);
+        }, (error) => {
+            console.error("Erreur de lecture de l'historique:", error);
+            setIsLoading(false);
         });
 
         return () => unsubscribe();
@@ -53,12 +62,25 @@ export default function HistoryPage() {
 
     const handleDelete = async (id: string) => {
         if (!user) return;
-        const docRef = doc(db, 'users', user.uid, 'history', id);
-        await deleteDoc(docRef);
-        setEntryToDelete(null); // Close dialog on success
-        setDeleteInput("");
+        try {
+            const docRef = doc(db, 'users', user.uid, 'history', id);
+            await deleteDoc(docRef);
+            toast({ title: "Succès", description: "Enregistrement supprimé de l'historique." });
+        } catch (error: any) {
+            toast({ title: "Erreur", description: "Impossible de supprimer l'enregistrement.", variant: "destructive" });
+        } finally {
+            setEntryToDelete(null); 
+            setDeleteInput("");
+        }
     };
     
+    const handleRecharge = (entry: HistoryEntry) => {
+        // Use sessionStorage to pass data between pages. It's cleared when the tab is closed.
+        sessionStorage.setItem('correctionData', JSON.stringify(entry));
+        toast({ title: "Mode Correction", description: `Rechargement de l'inventaire du ${new Date(entry.date).toLocaleDateString('fr-FR')}.`});
+        router.push('/dashboard');
+    }
+
     return (
         <>
             <header className="bg-primary text-primary-foreground shadow-md">
@@ -100,7 +122,12 @@ export default function HistoryPage() {
                                     <TableBody>
                                         {history.map(entry => (
                                             <TableRow key={entry.id}>
-                                                <TableCell>{new Date(entry.date).toLocaleDateString('fr-FR')}</TableCell>
+                                                <TableCell>
+                                                    {new Date(entry.date).toLocaleDateString('fr-FR')}
+                                                    {entry.modifieLe && (
+                                                        <Badge variant="outline" className="ml-2 text-xs">Corrigé</Badge>
+                                                    )}
+                                                </TableCell>
                                                 <TableCell className="font-medium">{entry.managerName}</TableCell>
                                                 <TableCell className={entry.finalResult > 0 ? 'text-green-600' : entry.finalResult < 0 ? 'text-destructive' : ''}>
                                                     {entry.finalResult > 0 ? `Surplus de ${entry.finalResult.toLocaleString()} FCFA` : entry.finalResult < 0 ? `Manquant de ${Math.abs(entry.finalResult).toLocaleString()} FCFA` : 'Bon'}
@@ -108,6 +135,9 @@ export default function HistoryPage() {
                                                 <TableCell className="text-right space-x-1">
                                                     <Button variant="outline" size="sm" onClick={() => setSelectedEntry(entry)}>
                                                         <Eye className="mr-2 h-4 w-4" /> Détails
+                                                    </Button>
+                                                     <Button variant="outline" size="sm" onClick={() => handleRecharge(entry)}>
+                                                        <Pencil className="mr-2 h-4 w-4" /> Corriger
                                                     </Button>
                                                     <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => { setDeleteInput(""); setEntryToDelete(entry); }}>
                                                         <Trash2 className="h-4 w-4" />
@@ -170,7 +200,13 @@ function HistoryDetailsDialog({ isOpen, setIsOpen, entry }: { isOpen: boolean, s
             <DialogContent className="max-w-4xl">
                 <DialogHeader>
                     <DialogTitle>Détails de l'inventaire du {new Date(entry.date).toLocaleDateString('fr-FR')}</DialogTitle>
-                    <DialogDescription>Gérant: {entry.managerName}</DialogDescription>
+                    <DialogDescription>Gérant: {entry.managerName}
+                     {entry.modifieLe && (
+                            <span className="text-xs text-muted-foreground italic ml-2">
+                                (Corrigé le {new Date(entry.modifieLe).toLocaleString('fr-FR')})
+                            </span>
+                        )}
+                    </DialogDescription>
                 </DialogHeader>
                 <div className="max-h-[70vh] overflow-y-auto p-1 pr-4">
                     <Accordion type="single" collapsible className="w-full" defaultValue="summary">

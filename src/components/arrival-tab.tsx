@@ -31,28 +31,38 @@ export interface ArrivalItem {
 interface ArrivalTabProps {
   onArrivalUpdate: (total: number, details: ArrivalItem[]) => void;
   boissons: Boisson[];
+  initialArrivals?: ArrivalItem[] | null;
 }
 
-export default function ArrivalTab({ onArrivalUpdate, boissons }: ArrivalTabProps) {
+export default function ArrivalTab({ onArrivalUpdate, boissons, initialArrivals = null }: ArrivalTabProps) {
   const [allArrivals, setAllArrivals] = useState<ArrivalItem[]>([]);
   const [selectedArrival, setSelectedArrival] = useState<ArrivalItem | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
+  const isCorrectionMode = !!initialArrivals;
 
   useEffect(() => {
     if (!user) {
         setAllArrivals([]);
         return;
     };
+    
+    // If in correction mode, the arrivals are passed as props and we don't listen to Firestore
+    if (isCorrectionMode) {
+        setAllArrivals(initialArrivals || []);
+        return;
+    }
 
     const arrivalsColRef = collection(db, 'users', user.uid, 'currentArrivals');
     const unsubscribe = onSnapshot(arrivalsColRef, (snapshot) => {
       const arrivalsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ArrivalItem));
       setAllArrivals(arrivalsData);
+    }, (error) => {
+        console.error("Erreur de lecture des arrivages:", error);
     });
     
     return () => unsubscribe();
-  }, [user]);
+  }, [user, isCorrectionMode, initialArrivals]);
 
   useEffect(() => {
       const total = allArrivals.reduce((acc, arrival) => acc + arrival.total, 0);
@@ -62,15 +72,27 @@ export default function ArrivalTab({ onArrivalUpdate, boissons }: ArrivalTabProp
   const handleAddArrival = async (newArrival: Omit<ArrivalItem, 'id'>) => {
     if (!user) return;
     const arrivalsColRef = collection(db, 'users', user.uid, 'currentArrivals');
-    await addDoc(arrivalsColRef, newArrival);
-    toast({ title: "Succès", description: "La liste des arrivages a été mise à jour." });
+    // In correction mode, we just update the local state. The final save will handle persistence.
+    if (isCorrectionMode) {
+        const arrivalWithId = { ...newArrival, id: `temp-${Date.now()}`};
+        setAllArrivals(prev => [...prev, arrivalWithId]);
+        toast({ title: "Arrivage ajouté (mode correction)", description: "L'arrivage sera sauvegardé avec la correction finale." });
+    } else {
+        await addDoc(arrivalsColRef, newArrival);
+        toast({ title: "Succès", description: "La liste des arrivages a été mise à jour." });
+    }
   };
 
   const handleDeleteArrival = async (id: string) => {
     if (!user) return;
-    const arrivalDocRef = doc(db, 'users', user.uid, 'currentArrivals', id);
-    await deleteDoc(arrivalDocRef);
-    toast({ title: "Succès", description: "Arrivage supprimé." });
+     if (isCorrectionMode) {
+        setAllArrivals(prev => prev.filter(a => a.id !== id));
+        toast({ title: "Arrivage supprimé (mode correction)"});
+     } else {
+        const arrivalDocRef = doc(db, 'users', user.uid, 'currentArrivals', id);
+        await deleteDoc(arrivalDocRef);
+        toast({ title: "Succès", description: "Arrivage supprimé." });
+     }
   };
   
   const totalArrivalValue = useMemo(() => {

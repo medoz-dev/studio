@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { doc, getDocs, setDoc, onSnapshot, collection, query, orderBy, limit, deleteDoc, addDoc, writeBatch, getDoc, Timestamp } from "firebase/firestore";
+import { doc, getDocs, setDoc, onSnapshot, collection, query, orderBy, limit, deleteDoc, addDoc, writeBatch, getDoc, Timestamp, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,7 +13,7 @@ import CalculationsTab from "@/components/calculations-tab";
 import { useToast } from "@/hooks/use-toast";
 import { useBoissons } from "@/hooks/useBoissons";
 import { Button } from "@/components/ui/button";
-import { Settings, History, LogOut, LifeBuoy, Home } from "lucide-react";
+import { Settings, History, LogOut, LifeBuoy, Home, AlertTriangle } from "lucide-react";
 import { auth } from '@/lib/firebase';
 import type { StockItem } from "@/components/stock-tab";
 import type { ArrivalItem } from "@/components/arrival-tab";
@@ -70,6 +70,9 @@ export default function DashboardPage() {
   const [subscriptionEndDate, setSubscriptionEndDate] = useState<Date | null>(null);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
 
+  // State for correction mode
+  const [correctionEntry, setCorrectionEntry] = useState<HistoryEntry | null>(null);
+
   // State for CalculationsTab lifted up to DashboardPage
   const [calculationDate, setCalculationDate] = useState(new Date().toISOString().split('T')[0]);
   const [managerName, setManagerName] = useState('');
@@ -80,6 +83,45 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!user) return;
+    
+    // Check for correction data on page load
+    const correctionDataString = sessionStorage.getItem('correctionData');
+    if (correctionDataString) {
+        const data = JSON.parse(correctionDataString) as HistoryEntry;
+        setCorrectionEntry(data);
+        
+        // Populate state from reloaded data
+        setCalculationDate(data.date);
+        setManagerName(data.managerName);
+        setEncaissement(data.encaissement);
+        setExpenses(data.expenseDetails);
+        setEspeceGerant(data.especeGerant);
+        setOldStock(data.oldStock);
+
+        // Populate stock quantities from reloaded data
+        const reloadedQuantities = data.stockDetails.reduce((acc, item) => {
+            acc[item.boisson.nom] = item.quantity;
+            return acc;
+        }, {} as Record<string, number>);
+        setStockQuantities(reloadedQuantities);
+
+        // Populate arrivals from reloaded data
+        // This is tricky because arrivals are in a subcollection. We'll add them.
+        const addRechargedArrivals = async () => {
+            if (!user) return;
+            const batch = writeBatch(db);
+            const arrivalsColRef = collection(db, 'users', user.uid, 'currentArrivals');
+            data.arrivalDetails.forEach(arrival => {
+                const docRef = doc(arrivalsColRef, arrival.id); // Use original ID to avoid duplicates on re-recharge
+                batch.set(docRef, arrival);
+            });
+            await batch.commit();
+        };
+        addRechargedArrivals();
+
+        sessionStorage.removeItem('correctionData'); // Clean up
+    }
+
 
     // Listener for user's data (name and subscription)
     const userDocRef = doc(db, 'users', user.uid);
@@ -96,13 +138,16 @@ export default function DashboardPage() {
     });
 
 
-    // Listener for current stock quantities
-    const quantitiesDocRef = doc(db, 'users', user.uid, 'inventoryState', 'stockQuantities');
-    const unsubQuantities = onSnapshot(quantitiesDocRef, (doc) => {
-      if (doc.exists()) {
-        setStockQuantities(doc.data() || {});
-      }
-    });
+    // Listener for current stock quantities (unless in correction mode)
+    let unsubQuantities = () => {};
+    if (!correctionEntry) {
+       const quantitiesDocRef = doc(db, 'users', user.uid, 'inventoryState', 'stockQuantities');
+       unsubQuantities = onSnapshot(quantitiesDocRef, (doc) => {
+         if (doc.exists()) {
+           setStockQuantities(doc.data() || {});
+         }
+       });
+    }
 
     // Listener for all arrivals
     const arrivalsColRef = collection(db, 'users', user.uid, 'currentArrivals');
@@ -113,17 +158,20 @@ export default function DashboardPage() {
       setArrivalDetails(arrivalsData);
     });
     
-    // Get latest stock value from history to set as oldStock
-    const historyColRef = collection(db, 'users', user.uid, 'history');
-    const q = query(historyColRef, orderBy('date', 'desc'), limit(1));
-    const unsubHistory = onSnapshot(q, (snapshot) => {
-        if (!snapshot.empty) {
-            const lastEntry = snapshot.docs[0].data() as HistoryEntry;
-            setOldStock(lastEntry.currentStockTotal || 0);
-        } else {
-            setOldStock(0);
-        }
-    });
+    // Get latest stock value from history to set as oldStock (unless in correction mode)
+    let unsubHistory = () => {};
+    if (!correctionEntry) {
+      const historyColRef = collection(db, 'users', user.uid, 'history');
+      const q = query(historyColRef, orderBy('date', 'desc'), limit(1));
+      unsubHistory = onSnapshot(q, (snapshot) => {
+          if (!snapshot.empty) {
+              const lastEntry = snapshot.docs[0].data() as HistoryEntry;
+              setOldStock(lastEntry.currentStockTotal || 0);
+          } else {
+              setOldStock(0);
+          }
+      });
+    }
 
 
     return () => {
@@ -132,15 +180,15 @@ export default function DashboardPage() {
       unsubArrivals();
       unsubHistory();
     };
-  }, [user]);
+  }, [user, correctionEntry]);
 
   const handleStockQuantitiesChange = useCallback(async (quantities: Record<string, number>) => {
     setStockQuantities(quantities);
-    if (user) {
+    if (user && !correctionEntry) { // Only save to Firestore if not in correction mode
       const docRef = doc(db, 'users', user.uid, 'inventoryState', 'stockQuantities');
       await setDoc(docRef, quantities, { merge: true });
     }
-  }, [user]);
+  }, [user, correctionEntry]);
 
   const handleStockUpdate = useCallback((total: number, details: StockItem[]) => {
       setStockTotal(total);
@@ -152,6 +200,28 @@ export default function DashboardPage() {
       setArrivalDetails(details);
   }, []);
 
+  const handleCancelCorrection = () => {
+      // Clear all transient data and state related to the correction
+      if (user) {
+          const clearData = async () => {
+              const batch = writeBatch(db);
+              const arrivalsColRef = collection(db, 'users', user.uid, 'currentArrivals');
+              const arrivalsSnapshot = await getDocs(arrivalsColRef);
+              arrivalsSnapshot.forEach((doc) => batch.delete(doc.ref));
+              
+              const quantitiesDocRef = doc(db, 'users', user.uid, 'inventoryState', 'stockQuantities');
+              batch.set(quantitiesDocRef, {});
+
+              await batch.commit();
+
+              setCorrectionEntry(null);
+              // Force reload to get fresh data from listeners
+              window.location.reload();
+          };
+          clearData();
+      }
+  };
+
 
   const handleSaveResults = async (calculationData: CalculationData) => {
     if (!user) {
@@ -159,19 +229,40 @@ export default function DashboardPage() {
       return;
     }
     try {
-        const historyEntry: Omit<HistoryEntry, 'id'> = {
-            ...calculationData,
-            stockDetails: stockDetails,
-            arrivalDetails: arrivalDetails,
-            expenseDetails: expenses,
-        };
-
         const batch = writeBatch(db);
-
-        // Add to history collection
-        const historyColRef = collection(db, 'users', user.uid, 'history');
-        const newHistoryDoc = doc(historyColRef);
-        batch.set(newHistoryDoc, historyEntry);
+        
+        if (correctionEntry) {
+            // ----- CORRECTION MODE -----
+            const historyEntry: HistoryEntry = {
+                ...calculationData,
+                id: correctionEntry.id, // Use the existing ID
+                stockDetails: stockDetails,
+                arrivalDetails: arrivalDetails,
+                expenseDetails: expenses,
+                modifieLe: new Date().toISOString(), // Add modification date
+            };
+            const historyDocRef = doc(db, 'users', user.uid, 'history', correctionEntry.id);
+            batch.set(historyDocRef, historyEntry); // Overwrite the existing document
+            toast({
+                title: "Succès!",
+                description: `L'inventaire du ${format(new Date(calculationData.date), "d MMM yyyy", {locale: fr})} a été corrigé.`,
+            });
+        } else {
+            // ----- NORMAL SAVE MODE -----
+            const historyEntry: Omit<HistoryEntry, 'id'> = {
+                ...calculationData,
+                stockDetails: stockDetails,
+                arrivalDetails: arrivalDetails,
+                expenseDetails: expenses,
+            };
+            const historyColRef = collection(db, 'users', user.uid, 'history');
+            const newHistoryDoc = doc(historyColRef);
+            batch.set(newHistoryDoc, historyEntry);
+            toast({
+                title: "Succès!",
+                description: `Résultats pour ${calculationData.managerName} enregistrés dans l'historique!`,
+            });
+        }
 
         // Clear current arrivals by deleting all documents in the collection
         const arrivalsColRef = collection(db, 'users', user.uid, 'currentArrivals');
@@ -189,13 +280,10 @@ export default function DashboardPage() {
         // Reset state after saving
         setManagerName('');
         setEncaissement(0);
-        setExpenses([]);
+setExpenses([]);
         setEspeceGerant(0);
-
-        toast({
-            title: "Succès!",
-            description: `Résultats pour ${calculationData.managerName} enregistrés dans l'historique!`,
-        });
+        setCorrectionEntry(null); // Exit correction mode
+        setCalculationDate(new Date().toISOString().split('T')[0]); // Reset date for next time
 
     } catch (error) {
         console.error("Failed to save results to Firestore", error);
@@ -249,6 +337,18 @@ export default function DashboardPage() {
         </div>
       </header>
       <main className="container mx-auto p-4 md:p-8">
+        {correctionEntry && (
+            <div className="mb-6 p-4 border-l-4 border-yellow-500 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 rounded-r-lg flex justify-between items-center">
+                <div className="flex items-center">
+                    <AlertTriangle className="h-6 w-6 mr-3"/>
+                    <div>
+                        <h3 className="font-bold">Mode Correction</h3>
+                        <p className="text-sm">Vous modifiez l'inventaire du {format(new Date(correctionEntry.date), "d MMMM yyyy", { locale: fr })}.</p>
+                    </div>
+                </div>
+                <Button variant="destructive" size="sm" onClick={handleCancelCorrection}>Annuler la Correction</Button>
+            </div>
+        )}
         {isLoading ? (
           <p>Chargement des données sur les boissons...</p>
         ) : (
@@ -264,10 +364,15 @@ export default function DashboardPage() {
               boissons={boissons} 
               stockQuantities={stockQuantities}
               onQuantityChange={handleStockQuantitiesChange}
+              isCorrectionMode={!!correctionEntry}
             />
           </TabsContent>
           <TabsContent value="arrival" className="printable-area">
-            <ArrivalTab onArrivalUpdate={handleArrivalUpdate} boissons={boissons} />
+            <ArrivalTab 
+              onArrivalUpdate={handleArrivalUpdate} 
+              boissons={boissons} 
+              initialArrivals={correctionEntry?.arrivalDetails || null}
+            />
           </TabsContent>
           <TabsContent value="calculations" className="printable-area">
             <CalculationsTab
@@ -286,6 +391,7 @@ export default function DashboardPage() {
               setExpenses={setExpenses}
               especeGerant={especeGerant}
               setEspeceGerant={setEspeceGerant}
+              isCorrectionMode={!!correctionEntry}
             />
           </TabsContent>
         </Tabs>
@@ -295,3 +401,5 @@ export default function DashboardPage() {
     </>
   );
 }
+
+    

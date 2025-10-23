@@ -25,6 +25,7 @@ interface StockTabProps {
   boissons: Boisson[];
   stockQuantities: Record<string, number>;
   onQuantityChange: (quantities: Record<string, number>) => void;
+  isCorrectionMode?: boolean;
 }
 
 function calculateValue(quantity: number, boisson: Boisson): number {
@@ -41,7 +42,7 @@ function calculateValue(quantity: number, boisson: Boisson): number {
 }
 
 
-export default function StockTab({ onStockUpdate, boissons, stockQuantities, onQuantityChange }: StockTabProps) {
+export default function StockTab({ onStockUpdate, boissons, stockQuantities, onQuantityChange, isCorrectionMode = false }: StockTabProps) {
   const [stockDate, setStockDate] = useState(new Date().toISOString().split('T')[0]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isListening, setIsListening] = useState(false);
@@ -196,38 +197,69 @@ export default function StockTab({ onStockUpdate, boissons, stockQuantities, onQ
 
   const filteredBoissons = useMemo(() => {
     if (!searchTerm) {
+      // In correction mode, we want to show all reloaded items, even if they were deleted from the catalog
+      if (isCorrectionMode) {
+          const reloadedNoms = Object.keys(stockQuantities);
+          const currentBoissonsNoms = boissons.map(b => b.nom);
+          const allNoms = [...new Set([...reloadedNoms, ...currentBoissonsNoms])];
+          
+          return allNoms.map(nom => {
+              const currentBoisson = boissons.find(b => b.nom === nom);
+              // We need to reconstruct a Boisson object if it was deleted.
+              // This is a simplification; the original `stockDetails` in history has the full object.
+              // The logic in dashboard page correctly reloads the state, here we just need to display it.
+              return currentBoisson || { nom, prix: 0, type: 'unite', trous: 0 }; 
+          }).sort((a, b) => a.nom.localeCompare(b.nom));
+      }
       return boissons;
     }
     return boissons.filter(b =>
       b.nom.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [searchTerm, boissons]);
+  }, [searchTerm, boissons, isCorrectionMode, stockQuantities]);
 
   const stockDetails: StockItem[] = useMemo(() => {
-    return filteredBoissons.map(boisson => {
+    // Logic to calculate details based on all available quantities, not just filtered.
+    // This is important for the total calculation.
+    const allItems = boissons.map(boisson => {
       const quantity = stockQuantities[boisson.nom] || 0;
       let value = calculateValue(quantity, boisson);
       return { boisson, quantity, value };
     });
-  }, [stockQuantities, filteredBoissons]);
+    // In correction mode, we must also include items that might not exist in `boissons` anymore
+    if (isCorrectionMode) {
+        Object.keys(stockQuantities).forEach(nom => {
+            if (!allItems.some(item => item.boisson.nom === nom)) {
+                 const quantity = stockQuantities[nom];
+                 // This is a placeholder, the real `boisson` object is in the HistoryEntry
+                 const placeholderBoisson: Boisson = { nom, prix: 0, type: 'unite', trous: 0 }; 
+                 const value = 0; // Value cannot be calculated without price.
+                 allItems.push({boisson: placeholderBoisson, quantity, value });
+            }
+        });
+    }
+
+    return allItems;
+
+  }, [stockQuantities, boissons, isCorrectionMode]);
 
   const totalStockValue = useMemo(() => {
-    // We calculate total based on ALL quantities, not just filtered ones
-    return boissons.reduce((acc, boisson) => {
-        const quantity = stockQuantities[boisson.nom] || 0;
-        let value = calculateValue(quantity, boisson);
-        return acc + value;
-    }, 0);
-  }, [stockQuantities, boissons]);
+    // The total is calculated from ALL quantities, not just filtered.
+    return stockDetails.reduce((acc, item) => acc + item.value, 0);
+  }, [stockDetails]);
+
 
   useEffect(() => {
     const allStockDetails = boissons
       .map(boisson => {
         const quantity = stockQuantities[boisson.nom] || 0;
-        const value = calculateValue(quantity, boisson);
-        return { boisson, quantity, value };
+        if (quantity > 0) {
+            const value = calculateValue(quantity, boisson);
+            return { boisson, quantity, value };
+        }
+        return null;
       })
-      .filter(d => d.quantity > 0);
+      .filter((d): d is StockItem => d !== null);
 
     onStockUpdate(totalStockValue, allStockDetails);
   }, [totalStockValue, stockQuantities, boissons, onStockUpdate]);
@@ -244,6 +276,16 @@ export default function StockTab({ onStockUpdate, boissons, stockQuantities, onQ
     window.print();
   };
 
+  // Create a sorted list for display purposes
+  const displayDetails: StockItem[] = useMemo(() => {
+    return filteredBoissons.map(boisson => {
+        const quantity = stockQuantities[boisson.nom] || 0;
+        let value = calculateValue(quantity, boisson);
+        return { boisson, quantity, value };
+    });
+  }, [filteredBoissons, stockQuantities]);
+
+
   return (
     <div className="space-y-6">
         <Card>
@@ -257,7 +299,7 @@ export default function StockTab({ onStockUpdate, boissons, stockQuantities, onQ
                  <div className="flex justify-between items-end gap-4">
                     <div className="max-w-sm">
                         <Label htmlFor="stockDate">Date d'inventaire:</Label>
-                        <Input type="date" id="stockDate" value={stockDate} onChange={(e) => setStockDate(e.target.value)} />
+                        <Input type="date" id="stockDate" value={stockDate} onChange={(e) => setStockDate(e.target.value)} disabled={isCorrectionMode} />
                     </div>
                      <div className="flex items-end gap-2 w-full max-w-xs">
                         <div className="relative w-full">
@@ -290,15 +332,15 @@ export default function StockTab({ onStockUpdate, boissons, stockQuantities, onQ
                               <TableHead>Boisson</TableHead>
                               <TableHead>Prix Unitaire</TableHead>
                               <TableHead className="w-32">Nombre</TableHead>
-                              <TableHead className="text-right">Valeur (filtrée)</TableHead>
+                              <TableHead className="text-right">Valeur</TableHead>
                           </TableRow>
                       </TableHeader>
                       <TableBody>
-                          {stockDetails.map(({ boisson, quantity, value }) => (
+                          {displayDetails.map(({ boisson, quantity, value }) => (
                               <TableRow key={boisson.nom}>
                                   <TableCell className="font-medium whitespace-nowrap">{boisson.nom}</TableCell>
                                   <TableCell className="whitespace-nowrap">
-                                      {boisson.special ? 'Prix spécial' : `${boisson.prix} FCFA`}
+                                      {boisson.prix === 0 && !boisson.special ? <span className="text-muted-foreground">N/A</span> : boisson.special ? 'Prix spécial' : `${boisson.prix} FCFA`}
                                   </TableCell>
                                   <TableCell>
                                       <Input 
@@ -331,3 +373,5 @@ export default function StockTab({ onStockUpdate, boissons, stockQuantities, onQ
     </div>
   );
 }
+
+    

@@ -10,6 +10,8 @@ import { Separator } from '@/components/ui/separator';
 import { Trash2, Save, Printer, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { CalculationData } from '@/lib/types';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 export interface Expense {
     id: number;
@@ -33,6 +35,7 @@ interface CalculationsTabProps {
     setExpenses: (expenses: Expense[]) => void;
     especeGerant: number;
     setEspeceGerant: (value: number) => void;
+    isCorrectionMode?: boolean;
 }
 
 const SummaryItem = ({ label, value }: { label: string, value: string }) => (
@@ -57,7 +60,8 @@ export default function CalculationsTab({
     expenses,
     setExpenses,
     especeGerant,
-    setEspeceGerant
+    setEspeceGerant,
+    isCorrectionMode = false,
 }: CalculationsTabProps) {
     const [oldStockInput, setOldStockInput] = useState(initialOldStock.toString());
     const [newExpenseMotif, setNewExpenseMotif] = useState('');
@@ -73,6 +77,13 @@ export default function CalculationsTab({
     useEffect(() => {
         setShowFinalResult(false);
     }, [initialOldStock, arrivalTotal, currentStockTotal]);
+    
+    // When entering correction mode, show the final result immediately
+    useEffect(() => {
+        if(isCorrectionMode) {
+            setShowFinalResult(true);
+        }
+    }, [isCorrectionMode]);
 
     const handleUpdateOldStock = () => {
         const newValue = Number(oldStockInput);
@@ -149,7 +160,7 @@ export default function CalculationsTab({
         window.print();
     }
 
-    const formattedDate = new Date(calculationDate).toLocaleDateString('fr-FR');
+    const formattedDate = format(new Date(calculationDate), 'd MMMM yyyy', { locale: fr });
     
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -170,6 +181,10 @@ export default function CalculationsTab({
                         <div className="space-y-2">
                              <Label htmlFor="managerName">Nom du Gérant</Label>
                              <Input id="managerName" value={managerName} onChange={(e) => setManagerName(e.target.value)} placeholder="Entrez le nom du gérant de caisse..." />
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="calculationDate">Date du Calcul</Label>
+                            <Input id="calculationDate" type="date" value={calculationDate} onChange={(e) => setCalculationDate(e.target.value)} disabled={isCorrectionMode} />
                         </div>
                         <Separator />
                         <div className="flex gap-2 items-end">
@@ -260,7 +275,10 @@ export default function CalculationsTab({
                         )}
                     </CardContent>
                     <CardFooter className="flex justify-end gap-2 no-print">
-                        <Button onClick={handleSave}><Save className="mr-2 h-4 w-4" />Enregistrer les Résultats</Button>
+                        <Button onClick={handleSave}>
+                            <Save className="mr-2 h-4 w-4" />
+                            {isCorrectionMode ? 'Enregistrer la Correction' : 'Enregistrer les Résultats'}
+                        </Button>
                         <Button variant="outline" onClick={printReport}><Printer className="mr-2 h-4 w-4" />Imprimer le Rapport</Button>
                     </CardFooter>
                 </Card>
@@ -268,3 +286,5 @@ export default function CalculationsTab({
         </div>
     );
 }
+
+    
