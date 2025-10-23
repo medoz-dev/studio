@@ -20,7 +20,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-
+import { format, formatDistanceToNow } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 const SummaryItem = ({ label, value, className = '' }: { label: string, value: string, className?: string }) => (
     <div className={`flex justify-between items-center py-2 ${className}`}>
@@ -75,9 +76,8 @@ export default function HistoryPage() {
     };
     
     const handleRecharge = (entry: HistoryEntry) => {
-        // Use sessionStorage to pass data between pages. It's cleared when the tab is closed.
         sessionStorage.setItem('correctionData', JSON.stringify(entry));
-        toast({ title: "Mode Correction", description: `Rechargement de l'inventaire du ${new Date(entry.date).toLocaleDateString('fr-FR')}.`});
+        toast({ title: "Mode Correction", description: `Rechargement de l'inventaire du ${format(new Date(entry.date), 'd MMMM yyyy', { locale: fr })}.`});
         router.push('/dashboard');
     }
 
@@ -123,10 +123,14 @@ export default function HistoryPage() {
                                         {history.map(entry => (
                                             <TableRow key={entry.id}>
                                                 <TableCell>
-                                                    {new Date(entry.date).toLocaleDateString('fr-FR')}
-                                                    {entry.modifieLe && (
-                                                        <Badge variant="outline" className="ml-2 text-xs">Corrigé</Badge>
-                                                    )}
+                                                    <div className="flex flex-col">
+                                                        <span>{format(new Date(entry.date), 'd MMMM yyyy', { locale: fr })}</span>
+                                                        {entry.modifieLe && (
+                                                            <span className="text-xs text-yellow-600 dark:text-yellow-400 italic">
+                                                                Corrigé il y a {formatDistanceToNow(new Date(entry.modifieLe), { locale: fr, addSuffix: false })}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </TableCell>
                                                 <TableCell className="font-medium">{entry.managerName}</TableCell>
                                                 <TableCell className={entry.finalResult > 0 ? 'text-green-600' : entry.finalResult < 0 ? 'text-destructive' : ''}>
@@ -199,11 +203,12 @@ function HistoryDetailsDialog({ isOpen, setIsOpen, entry }: { isOpen: boolean, s
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogContent className="max-w-4xl">
                 <DialogHeader>
-                    <DialogTitle>Détails de l'inventaire du {new Date(entry.date).toLocaleDateString('fr-FR')}</DialogTitle>
-                    <DialogDescription>Gérant: {entry.managerName}
+                    <DialogTitle>Détails de l'inventaire du {format(new Date(entry.date), 'd MMMM yyyy', { locale: fr })}</DialogTitle>
+                    <DialogDescription>
+                        Gérant: {entry.managerName}
                      {entry.modifieLe && (
                             <span className="text-xs text-muted-foreground italic ml-2">
-                                (Corrigé le {new Date(entry.modifieLe).toLocaleString('fr-FR')})
+                                (Corrigé le {format(new Date(entry.modifieLe), 'd MMM yyyy à HH:mm', { locale: fr })})
                             </span>
                         )}
                     </DialogDescription>
@@ -269,7 +274,7 @@ function HistoryDetailsDialog({ isOpen, setIsOpen, entry }: { isOpen: boolean, s
                                 {entry.arrivalDetails.length === 0 ? <p>Aucun arrivage pour cette période.</p> :
                                     entry.arrivalDetails.map(arrival => (
                                         <div key={arrival.id} className="mb-4 border p-4 rounded-md">
-                                            <h4 className="font-semibold mb-2">Arrivage du {new Date(arrival.date).toLocaleDateString('fr-FR')} - Total: {arrival.total.toLocaleString()} FCFA</h4>
+                                            <h4 className="font-semibold mb-2">Arrivage du {format(new Date(arrival.date), 'd MMMM yyyy', { locale: fr })} - Total: {arrival.total.toLocaleString()} FCFA</h4>
                                             <Table>
                                                 <TableHeader><TableRow><TableHead>Boisson</TableHead><TableHead>Quantité</TableHead><TableHead className="text-right">Valeur</TableHead></TableRow></TableHeader>
                                                 <TableBody>
@@ -308,5 +313,3 @@ function HistoryDetailsDialog({ isOpen, setIsOpen, entry }: { isOpen: boolean, s
         </Dialog>
     );
 }
-
-    
