@@ -18,6 +18,11 @@ export interface CalculationData {
     especeGerant: number;
     finalResult: number;
 }
+
+export interface CorrectionLog {
+    dateCorrection: string;
+    detailsDesChangements: string[];
+}
   
 export interface HistoryEntry extends CalculationData {
     id: string; // Firestore ID is a string
@@ -25,6 +30,7 @@ export interface HistoryEntry extends CalculationData {
     arrivalDetails: ArrivalItem[];
     expenseDetails: Expense[];
     modifieLe?: string; // Optional: ISO date string for modification tracking
+    historiqueCorrections?: CorrectionLog[]; // New: Detailed log of changes
 }
 
     

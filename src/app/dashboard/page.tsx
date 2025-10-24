@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { doc, getDocs, setDoc, onSnapshot, collection, query, orderBy, limit, deleteDoc, addDoc, writeBatch, getDoc, Timestamp, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -18,7 +18,7 @@ import { auth } from '@/lib/firebase';
 import type { StockItem } from "@/components/stock-tab";
 import type { ArrivalItem } from "@/components/arrival-tab";
 import type { Expense } from "@/components/calculations-tab";
-import type { CalculationData, HistoryEntry } from "@/lib/types";
+import type { CalculationData, HistoryEntry, CorrectionLog } from "@/lib/types";
 import { differenceInDays, format, addDays, isBefore } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import HelpDialog from "@/components/HelpDialog";
@@ -72,6 +72,8 @@ export default function DashboardPage() {
 
   // State for correction mode
   const [correctionEntry, setCorrectionEntry] = useState<HistoryEntry | null>(null);
+  const originalCorrectionEntry = useRef<HistoryEntry | null>(null);
+
 
   // State for CalculationsTab lifted up to DashboardPage
   const [calculationDate, setCalculationDate] = useState(new Date().toISOString().split('T')[0]);
@@ -88,6 +90,7 @@ export default function DashboardPage() {
     const correctionDataString = sessionStorage.getItem('correctionData');
     if (correctionDataString) {
         const data = JSON.parse(correctionDataString) as HistoryEntry;
+        originalCorrectionEntry.current = JSON.parse(correctionDataString); // Keep a pristine copy
         setCorrectionEntry(data);
         
         // Populate state from reloaded data
@@ -106,20 +109,11 @@ export default function DashboardPage() {
         setStockQuantities(reloadedQuantities);
 
         // Populate arrivals from reloaded data
-        // This is tricky because arrivals are in a subcollection. We'll add them.
-        const addRechargedArrivals = async () => {
-            if (!user) return;
-            const batch = writeBatch(db);
-            const arrivalsColRef = collection(db, 'users', user.uid, 'currentArrivals');
-            data.arrivalDetails.forEach(arrival => {
-                const docRef = doc(arrivalsColRef, arrival.id); // Use original ID to avoid duplicates on re-recharge
-                batch.set(docRef, arrival);
-            });
-            await batch.commit();
-        };
-        addRechargedArrivals();
+        setArrivalDetails(data.arrivalDetails);
 
         sessionStorage.removeItem('correctionData'); // Clean up
+    } else {
+        originalCorrectionEntry.current = null;
     }
 
 
@@ -149,14 +143,15 @@ export default function DashboardPage() {
        });
     }
 
-    // Listener for all arrivals
-    const arrivalsColRef = collection(db, 'users', user.uid, 'currentArrivals');
-    const unsubArrivals = onSnapshot(arrivalsColRef, (snapshot) => {
-      const arrivalsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ArrivalItem));
-      const total = arrivalsData.reduce((acc, arrival) => acc + arrival.total, 0);
-      setArrivalTotal(total);
-      setArrivalDetails(arrivalsData);
-    });
+    // Listener for all arrivals (unless in correction mode)
+    let unsubArrivals = () => {};
+     if (!correctionEntry) {
+        const arrivalsColRef = collection(db, 'users', user.uid, 'currentArrivals');
+        unsubArrivals = onSnapshot(arrivalsColRef, (snapshot) => {
+          const arrivalsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ArrivalItem));
+          setArrivalDetails(arrivalsData);
+        });
+     }
     
     // Get latest stock value from history to set as oldStock (unless in correction mode)
     let unsubHistory = () => {};
@@ -180,7 +175,14 @@ export default function DashboardPage() {
       unsubArrivals();
       unsubHistory();
     };
-  }, [user, correctionEntry]);
+  }, [user]);
+
+  // Sync arrivalTotal when arrivalDetails changes
+   useEffect(() => {
+        const total = arrivalDetails.reduce((acc, arrival) => acc + arrival.total, 0);
+        setArrivalTotal(total);
+    }, [arrivalDetails]);
+
 
   const handleStockQuantitiesChange = useCallback(async (quantities: Record<string, number>) => {
     setStockQuantities(quantities);
@@ -196,30 +198,54 @@ export default function DashboardPage() {
   }, []);
 
   const handleArrivalUpdate = useCallback((total: number, details: ArrivalItem[]) => {
+      // In correction mode, this is handled locally
+      if(correctionEntry) {
+          setArrivalDetails(details);
+      }
       setArrivalTotal(total);
-      setArrivalDetails(details);
-  }, []);
+  }, [correctionEntry]);
 
   const handleCancelCorrection = () => {
-      // Clear all transient data and state related to the correction
-      if (user) {
-          const clearData = async () => {
-              const batch = writeBatch(db);
-              const arrivalsColRef = collection(db, 'users', user.uid, 'currentArrivals');
-              const arrivalsSnapshot = await getDocs(arrivalsColRef);
-              arrivalsSnapshot.forEach((doc) => batch.delete(doc.ref));
-              
-              const quantitiesDocRef = doc(db, 'users', user.uid, 'inventoryState', 'stockQuantities');
-              batch.set(quantitiesDocRef, {});
+      setCorrectionEntry(null);
+      originalCorrectionEntry.current = null;
+      window.location.reload();
+  };
 
-              await batch.commit();
+  const generateChangeLog = (original: HistoryEntry, current: CalculationData, currentStock: StockItem[], currentArrivals: ArrivalItem[], currentExpenses: Expense[]): string[] => {
+      const changes: string[] = [];
+      const f = (val: number) => val.toLocaleString() + ' FCFA';
 
-              setCorrectionEntry(null);
-              // Force reload to get fresh data from listeners
-              window.location.reload();
-          };
-          clearData();
-      }
+      // Simple fields
+      if(original.managerName !== current.managerName) changes.push(`Gérant : "${original.managerName}" ➔ "${current.managerName}"`);
+      if(original.oldStock !== current.oldStock) changes.push(`Stock Ancien : ${f(original.oldStock)} ➔ ${f(current.oldStock)}`);
+      if(original.encaissement !== current.encaissement) changes.push(`Encaissement : ${f(original.encaissement)} ➔ ${f(current.encaissement)}`);
+      if(original.especeGerant !== current.especeGerant) changes.push(`Espèce Gérant : ${f(original.especeGerant)} ➔ ${f(current.especeGerant)}`);
+
+      // Stock Details
+      const originalStockMap = new Map(original.stockDetails.map(item => [item.boisson.nom, item.quantity]));
+      const currentStockMap = new Map(currentStock.map(item => [item.boisson.nom, item.quantity]));
+      const allStockKeys = new Set([...originalStockMap.keys(), ...currentStockMap.keys()]);
+      allStockKeys.forEach(key => {
+          const oldQty = originalStockMap.get(key) || 0;
+          const newQty = currentStockMap.get(key) || 0;
+          if(oldQty !== newQty) changes.push(`Stock "${key}" : ${oldQty} ➔ ${newQty}`);
+      });
+      
+      // Expenses
+      const originalExpenseMap = new Map(original.expenseDetails.map(e => [`${e.motif}-${e.montant}`, e]));
+      const currentExpenseMap = new Map(currentExpenses.map(e => [`${e.motif}-${e.montant}`, e]));
+      original.expenseDetails.forEach(exp => {
+        if (!currentExpenseMap.has(`${exp.motif}-${exp.montant}`)) changes.push(`Dépense supprimée : "${exp.motif}" (${f(exp.montant)})`);
+      });
+      currentExpenses.forEach(exp => {
+        if (!originalExpenseMap.has(`${exp.motif}-${exp.montant}`)) changes.push(`Dépense ajoutée : "${exp.motif}" (${f(exp.montant)})`);
+      });
+
+      // Arrivals (simplified: check if total is different)
+      const originalArrivalTotal = original.arrivalDetails.reduce((sum, a) => sum + a.total, 0);
+      if(originalArrivalTotal !== current.arrivalTotal) changes.push(`Total Arrivages : ${f(originalArrivalTotal)} ➔ ${f(current.arrivalTotal)}`);
+
+      return changes;
   };
 
 
@@ -231,8 +257,15 @@ export default function DashboardPage() {
     try {
         const batch = writeBatch(db);
         
-        if (correctionEntry) {
+        if (correctionEntry && originalCorrectionEntry.current) {
             // ----- CORRECTION MODE -----
+            const changes = generateChangeLog(originalCorrectionEntry.current, calculationData, stockDetails, arrivalDetails, expenses);
+
+            const newCorrectionLog: CorrectionLog = {
+                dateCorrection: new Date().toISOString(),
+                detailsDesChangements: changes,
+            };
+
             const historyEntry: HistoryEntry = {
                 ...calculationData,
                 id: correctionEntry.id, // Use the existing ID
@@ -240,6 +273,7 @@ export default function DashboardPage() {
                 arrivalDetails: arrivalDetails,
                 expenseDetails: expenses,
                 modifieLe: new Date().toISOString(), // Add modification date
+                historiqueCorrections: [...(correctionEntry.historiqueCorrections || []), newCorrectionLog],
             };
             const historyDocRef = doc(db, 'users', user.uid, 'history', correctionEntry.id);
             batch.set(historyDocRef, historyEntry); // Overwrite the existing document
@@ -280,9 +314,10 @@ export default function DashboardPage() {
         // Reset state after saving
         setManagerName('');
         setEncaissement(0);
-setExpenses([]);
+        setExpenses([]);
         setEspeceGerant(0);
-        setCorrectionEntry(null); // Exit correction mode
+        setCorrectionEntry(null);
+        originalCorrectionEntry.current = null;
         setCalculationDate(new Date().toISOString().split('T')[0]); // Reset date for next time
 
     } catch (error) {
@@ -371,7 +406,7 @@ setExpenses([]);
             <ArrivalTab 
               onArrivalUpdate={handleArrivalUpdate} 
               boissons={boissons} 
-              initialArrivals={correctionEntry?.arrivalDetails || null}
+              initialArrivals={correctionEntry ? arrivalDetails : null}
             />
           </TabsContent>
           <TabsContent value="calculations" className="printable-area">
