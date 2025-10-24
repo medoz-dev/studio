@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -199,6 +200,11 @@ export default function HistoryPage() {
 function HistoryDetailsDialog({ isOpen, setIsOpen, entry }: { isOpen: boolean, setIsOpen: (open: boolean) => void, entry: HistoryEntry | null }) {
     if (!entry) return null;
 
+    const defaultOpenValues = ['summary'];
+    if (entry.historiqueCorrections && entry.historiqueCorrections.length > 0) {
+        defaultOpenValues.push('corrections');
+    }
+
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogContent className="max-w-4xl">
@@ -214,7 +220,7 @@ function HistoryDetailsDialog({ isOpen, setIsOpen, entry }: { isOpen: boolean, s
                     </DialogDescription>
                 </DialogHeader>
                 <div className="max-h-[70vh] overflow-y-auto p-1 pr-4">
-                    <Accordion type="multiple" collapsible className="w-full" defaultValue={['summary', 'corrections']}>
+                    <Accordion type="multiple" collapsible className="w-full" defaultValue={defaultOpenValues}>
                         <AccordionItem value="summary">
                             <AccordionTrigger className="text-lg font-semibold">Résumé des Calculs</AccordionTrigger>
                             <AccordionContent className="space-y-2 pr-2">
@@ -339,5 +345,3 @@ function HistoryDetailsDialog({ isOpen, setIsOpen, entry }: { isOpen: boolean, s
         </Dialog>
     );
 }
-
-    
