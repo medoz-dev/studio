@@ -31,10 +31,10 @@ export default function LandingPage() {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 grid gap-10 md:grid-cols-2 md:items-center">
             <div className="space-y-6">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-primary">
-                Transformez votre gestion. Libérez votre potentiel.
+                Transformez la gestion de votre bar, libérez votre potentiel.
               </h1>
               <p className="max-w-xl text-lg text-muted-foreground">
-                Arrêtez de perdre du temps et de l'argent avec les cahiers. Inventaire Pro automatise vos inventaires, détecte les manquants et vous donne le contrôle total pour faire grandir votre business.
+                Inventaire Pro est l'outil ultime pour les gérants de bars et restaurants au Bénin. Arrêtez de perdre du temps et de l'argent avec les cahiers. Automatisez vos inventaires, détectez les manquants et prenez le contrôle total pour faire grandir votre business.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link href="/login">
