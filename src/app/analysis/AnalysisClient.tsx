@@ -170,38 +170,40 @@ export default function AnalysisClient() {
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                                <SummaryCard label="Bilan Net" value={`${analysisResult.netBalance.toLocaleString()} FCFA`} colorClass={analysisResult.netBalance < 0 ? 'text-destructive' : 'text-green-600'} />
-                                <SummaryCard label="Total des Manquants" value={`${analysisResult.totalMissing.toLocaleString()} FCFA`} colorClass="text-destructive" />
-                                <SummaryCard label="Total des Surplus" value={`${analysisResult.totalSurplus.toLocaleString()} FCFA`} colorClass="text-green-600" />
-                            </div>
-
-                            <h3 className="text-lg font-semibold mb-4">Détail des inventaires</h3>
-                            {analysisResult.entries.length === 0 ? (
+                             {analysisResult.entries.length === 0 ? (
                                 <p className="text-muted-foreground text-center py-8">Aucun inventaire trouvé pour cette sélection.</p>
                             ) : (
-                                <div className="border rounded-md">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Date</TableHead>
-                                                <TableHead>Gérant</TableHead>
-                                                <TableHead className="text-right">Résultat</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {analysisResult.entries.map(entry => (
-                                                <TableRow key={entry.id}>
-                                                    <TableCell>{format(new Date(entry.date), 'd MMMM yyyy', { locale: fr })}</TableCell>
-                                                    <TableCell>{entry.managerName}</TableCell>
-                                                    <TableCell className={`text-right font-medium ${entry.finalResult < 0 ? 'text-destructive' : 'text-green-600'}`}>
-                                                        {entry.finalResult.toLocaleString()} FCFA
-                                                    </TableCell>
+                                <>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                                        <SummaryCard label="Bilan Net" value={`${analysisResult.netBalance.toLocaleString()} FCFA`} colorClass={analysisResult.netBalance < 0 ? 'text-destructive' : 'text-green-600'} />
+                                        <SummaryCard label="Total des Manquants" value={`${analysisResult.totalMissing.toLocaleString()} FCFA`} colorClass="text-destructive" />
+                                        <SummaryCard label="Total des Surplus" value={`${analysisResult.totalSurplus.toLocaleString()} FCFA`} colorClass="text-green-600" />
+                                    </div>
+
+                                    <h3 className="text-lg font-semibold mb-4">Détail des inventaires</h3>
+                                    <div className="border rounded-md">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Date</TableHead>
+                                                    <TableHead>Gérant</TableHead>
+                                                    <TableHead className="text-right">Résultat</TableHead>
                                                 </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </div>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {analysisResult.entries.map(entry => (
+                                                    <TableRow key={entry.id}>
+                                                        <TableCell>{format(new Date(entry.date), 'd MMMM yyyy', { locale: fr })}</TableCell>
+                                                        <TableCell>{entry.managerName}</TableCell>
+                                                        <TableCell className={`text-right font-medium ${entry.finalResult < 0 ? 'text-destructive' : 'text-green-600'}`}>
+                                                            {entry.finalResult.toLocaleString()} FCFA
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                </>
                             )}
                         </CardContent>
                     </Card>
@@ -210,4 +212,3 @@ export default function AnalysisClient() {
         </>
     );
 }
-
