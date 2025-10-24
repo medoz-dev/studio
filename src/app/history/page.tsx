@@ -127,7 +127,7 @@ export default function HistoryPage() {
                                                         <span>{format(new Date(entry.date), 'd MMMM yyyy', { locale: fr })}</span>
                                                         {entry.modifieLe && (
                                                             <span className="text-xs text-yellow-600 dark:text-yellow-400 italic" title={format(new Date(entry.modifieLe), 'd MMM yy, HH:mm')}>
-                                                                Corrigé il y a {formatDistanceToNow(new Date(entry.modifieLe), { locale: fr, addSuffix: false })}
+                                                                Corrigé {formatDistanceToNow(new Date(entry.modifieLe), { locale: fr, addSuffix: true })}
                                                             </span>
                                                         )}
                                                     </div>
@@ -214,7 +214,7 @@ function HistoryDetailsDialog({ isOpen, setIsOpen, entry }: { isOpen: boolean, s
                     </DialogDescription>
                 </DialogHeader>
                 <div className="max-h-[70vh] overflow-y-auto p-1 pr-4">
-                    <Accordion type="multiple" collapsible className="w-full" defaultValue={['summary']}>
+                    <Accordion type="multiple" collapsible className="w-full" defaultValue={['summary', 'corrections']}>
                         <AccordionItem value="summary">
                             <AccordionTrigger className="text-lg font-semibold">Résumé des Calculs</AccordionTrigger>
                             <AccordionContent className="space-y-2 pr-2">
@@ -318,7 +318,7 @@ function HistoryDetailsDialog({ isOpen, setIsOpen, entry }: { isOpen: boolean, s
                                                 {log.detailsDesChangements.length > 0 ? (
                                                     <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-1">
                                                         {log.detailsDesChangements.map((change, i) => (
-                                                            <li key={i}><span dangerouslySetInnerHTML={{ __html: change.replace(/➔/g, '<span class="font-bold text-foreground">➔</span>') }} /></li>
+                                                            <li key={i} dangerouslySetInnerHTML={{ __html: change.replace(/➔/g, '<span class="mx-1 font-bold text-foreground">➔</span>') }}></li>
                                                         ))}
                                                     </ul>
                                                 ) : (
