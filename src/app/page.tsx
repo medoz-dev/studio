@@ -31,10 +31,10 @@ export default function LandingPage() {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 grid gap-10 md:grid-cols-2 md:items-center">
             <div className="space-y-6">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-primary">
-                La gestion de stock, enfin simple et intelligente.
+                Transformez votre gestion. Libérez votre potentiel.
               </h1>
               <p className="max-w-xl text-lg text-muted-foreground">
-                Arrêtez de perdre du temps et de l'argent avec les cahiers. Inventaire Pro automatise vos inventaires, détecte les manquants et vous donne le contrôle total sur votre bar ou restaurant.
+                Arrêtez de perdre du temps et de l'argent avec les cahiers. Inventaire Pro automatise vos inventaires, détecte les manquants et vous donne le contrôle total pour faire grandir votre business.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link href="/login">
@@ -44,12 +44,12 @@ export default function LandingPage() {
             </div>
             <div className="flex justify-center">
                 <Image 
-                    src="https://picsum.photos/seed/modern%20bar/600/500"
-                    alt="Intérieur d'un bar moderne et chaleureux"
+                    src="https://picsum.photos/seed/business%20growth/600/500"
+                    alt="Graphique de croissance symbolisant le succès d'une entreprise"
                     width={600}
                     height={500}
                     className="rounded-xl shadow-2xl"
-                    data-ai-hint="modern bar"
+                    data-ai-hint="business growth"
                 />
             </div>
           </div>
