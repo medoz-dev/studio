@@ -13,7 +13,7 @@ import CalculationsTab from "@/components/calculations-tab";
 import { useToast } from "@/hooks/use-toast";
 import { useBoissons } from "@/hooks/useBoissons";
 import { Button } from "@/components/ui/button";
-import { Settings, History, LogOut, LifeBuoy, Home, AlertTriangle, Users, BarChart2 } from "lucide-react";
+import { Settings, History, LogOut, LifeBuoy, Home, AlertTriangle, Users, BarChart2, Menu } from "lucide-react";
 import { auth } from '@/lib/firebase';
 import type { StockItem } from "@/components/stock-tab";
 import type { ArrivalItem } from "@/components/arrival-tab";
@@ -24,6 +24,13 @@ import { fr } from 'date-fns/locale';
 import HelpDialog from "@/components/HelpDialog";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useManagers } from "@/hooks/useManagers";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 
 function SubscriptionStatus({ subscriptionEndDate, creationDate }: { subscriptionEndDate: Date | null, creationDate: string | null }) {
@@ -312,31 +319,76 @@ export default function DashboardPage() {
                 </Button>
             </Link>
           </div>
-           <div className="absolute top-1/2 -translate-y-1/2 right-4 flex gap-2">
+           <div className="absolute top-1/2 -translate-y-1/2 right-4 flex items-center gap-2">
              <ThemeToggle />
-             <Button variant="secondary" size="icon" title="Aide et Infos" onClick={() => setIsHelpOpen(true)}>
-                <LifeBuoy />
-                <span className="sr-only">Aide</span>
-             </Button>
-             <Link href="/analysis">
-                <Button asChild variant="secondary" size="icon" title="Analyse des Performances">
-                    <BarChart2 />
+
+            {/* Desktop Icons */}
+            <div className="hidden md:flex items-center gap-2">
+                <Button variant="secondary" size="icon" title="Aide et Infos" onClick={() => setIsHelpOpen(true)}>
+                    <LifeBuoy />
+                    <span className="sr-only">Aide</span>
                 </Button>
-            </Link>
-             <Link href="/history">
-                <Button asChild variant="secondary" size="icon" title="Historique">
-                    <History />
+                <Link href="/analysis">
+                    <Button asChild variant="secondary" size="icon" title="Analyse des Performances">
+                        <BarChart2 />
+                    </Button>
+                </Link>
+                <Link href="/history">
+                    <Button asChild variant="secondary" size="icon" title="Historique">
+                        <History />
+                    </Button>
+                </Link>
+                <Link href="/admin">
+                    <Button asChild variant="secondary" size="icon" title="Administration">
+                        <Settings />
+                    </Button>
+                </Link>
+                <Button variant="destructive" size="icon" title="Déconnexion" onClick={handleLogout}>
+                    <LogOut />
+                    <span className="sr-only">Déconnexion</span>
                 </Button>
-            </Link>
-             <Link href="/admin">
-                <Button asChild variant="secondary" size="icon" title="Administration">
-                    <Settings />
-                </Button>
-            </Link>
-            <Button variant="destructive" size="icon" title="Déconnexion" onClick={handleLogout}>
-                <LogOut />
-                <span className="sr-only">Déconnexion</span>
-            </Button>
+            </div>
+
+            {/* Mobile Dropdown Menu */}
+            <div className="md:hidden">
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="secondary" size="icon">
+                            <Menu />
+                            <span className="sr-only">Ouvrir le menu</span>
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setIsHelpOpen(true)}>
+                            <LifeBuoy className="mr-2 h-4 w-4" />
+                            <span>Aide et Infos</span>
+                        </DropdownMenuItem>
+                        <Link href="/analysis">
+                            <DropdownMenuItem>
+                                <BarChart2 className="mr-2 h-4 w-4" />
+                                <span>Analyse</span>
+                            </DropdownMenuItem>
+                        </Link>
+                        <Link href="/history">
+                             <DropdownMenuItem>
+                                <History className="mr-2 h-4 w-4" />
+                                <span>Historique</span>
+                            </DropdownMenuItem>
+                        </Link>
+                        <Link href="/admin">
+                            <DropdownMenuItem>
+                                <Settings className="mr-2 h-4 w-4" />
+                                <span>Administration</span>
+                            </DropdownMenuItem>
+                        </Link>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+                            <LogOut className="mr-2 h-4 w-4" />
+                            <span>Déconnexion</span>
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
            </div>
         </div>
       </header>
@@ -406,3 +458,5 @@ export default function DashboardPage() {
     </>
   );
 }
+
+    
