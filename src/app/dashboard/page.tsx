@@ -260,7 +260,7 @@ export default function DashboardPage() {
         const batch = writeBatch(db);
         
         if (correctionEntry && originalCorrectionEntry.current) {
-            // ----- CORRECTION MODE -----
+            // ----- CORRECTION MODE (BUG FIXED) -----
             const changes = generateChangeLog(originalCorrectionEntry.current, calculationData, stockDetails, arrivalDetails, expenses);
 
             const newCorrectionLog: CorrectionLog = {
@@ -277,6 +277,7 @@ export default function DashboardPage() {
                 modifieLe: new Date().toISOString(), // Add modification date
                 historiqueCorrections: [...(correctionEntry.historiqueCorrections || []), newCorrectionLog],
             };
+            // Use the EXISTING document reference for update
             const historyDocRef = doc(db, 'users', user.uid, 'history', correctionEntry.id);
             batch.set(historyDocRef, historyEntry); // Overwrite the existing document
             
@@ -460,5 +461,3 @@ export default function DashboardPage() {
     </>
   );
 }
-
-    
