@@ -200,11 +200,6 @@ export default function HistoryPage() {
 function HistoryDetailsDialog({ isOpen, setIsOpen, entry }: { isOpen: boolean, setIsOpen: (open: boolean) => void, entry: HistoryEntry | null }) {
     if (!entry) return null;
 
-    const defaultOpenValues = ['summary'];
-    if (entry.historiqueCorrections && entry.historiqueCorrections.length > 0) {
-        defaultOpenValues.push('corrections');
-    }
-
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogContent className="max-w-4xl">
@@ -220,7 +215,7 @@ function HistoryDetailsDialog({ isOpen, setIsOpen, entry }: { isOpen: boolean, s
                     </DialogDescription>
                 </DialogHeader>
                 <div className="max-h-[70vh] overflow-y-auto p-1 pr-4">
-                    <Accordion type="multiple" collapsible className="w-full" defaultValue={defaultOpenValues}>
+                    <Accordion type="multiple" collapsible className="w-full" defaultValue={['summary']}>
                         <AccordionItem value="summary">
                             <AccordionTrigger className="text-lg font-semibold">Résumé des Calculs</AccordionTrigger>
                             <AccordionContent className="space-y-2 pr-2">
@@ -310,32 +305,6 @@ function HistoryDetailsDialog({ isOpen, setIsOpen, entry }: { isOpen: boolean, s
                                 </Table>
                             </AccordionContent>
                         </AccordionItem>
-                        
-                         {entry.historiqueCorrections && entry.historiqueCorrections.length > 0 && (
-                            <AccordionItem value="corrections">
-                                <AccordionTrigger className="text-lg font-semibold text-yellow-600 dark:text-yellow-400">Journal des Corrections</AccordionTrigger>
-                                <AccordionContent>
-                                    <div className="space-y-4">
-                                        {entry.historiqueCorrections.slice().reverse().map((log, index) => (
-                                            <div key={index} className="p-3 border rounded-md bg-secondary/50">
-                                                <p className="font-semibold text-sm mb-2">
-                                                    Correction du {format(new Date(log.dateCorrection), 'd MMM yyyy à HH:mm', { locale: fr })}
-                                                </p>
-                                                {log.detailsDesChangements.length > 0 ? (
-                                                    <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-1">
-                                                        {log.detailsDesChangements.map((change, i) => (
-                                                            <li key={i} dangerouslySetInnerHTML={{ __html: change.replace(/➔/g, '<span class="mx-1 font-bold text-foreground">➔</span>') }}></li>
-                                                        ))}
-                                                    </ul>
-                                                ) : (
-                                                    <p className="text-sm text-muted-foreground italic">Aucun changement détecté pour cette sauvegarde.</p>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </AccordionContent>
-                            </AccordionItem>
-                        )}
                     </Accordion>
                 </div>
                 <DialogFooter>
@@ -345,5 +314,3 @@ function HistoryDetailsDialog({ isOpen, setIsOpen, entry }: { isOpen: boolean, s
         </Dialog>
     );
 }
-
-    

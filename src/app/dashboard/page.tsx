@@ -18,7 +18,7 @@ import { auth } from '@/lib/firebase';
 import type { StockItem } from "@/components/stock-tab";
 import type { ArrivalItem } from "@/components/arrival-tab";
 import type { Expense } from "@/components/calculations-tab";
-import type { CalculationData, HistoryEntry, CorrectionLog } from "@/lib/types";
+import type { CalculationData, HistoryEntry } from "@/lib/types";
 import { differenceInDays, format, addDays, isBefore } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import HelpDialog from "@/components/HelpDialog";
@@ -74,7 +74,6 @@ export default function DashboardPage() {
 
   // State for correction mode
   const [correctionEntry, setCorrectionEntry] = useState<HistoryEntry | null>(null);
-  const originalCorrectionEntry = useRef<HistoryEntry | null>(null);
 
 
   // State for CalculationsTab lifted up to DashboardPage
@@ -92,7 +91,6 @@ export default function DashboardPage() {
     const correctionDataString = sessionStorage.getItem('correctionData');
     if (correctionDataString) {
         const data = JSON.parse(correctionDataString) as HistoryEntry;
-        originalCorrectionEntry.current = JSON.parse(correctionDataString); // Keep a pristine copy
         setCorrectionEntry(data);
         
         // Populate state from reloaded data
@@ -114,8 +112,6 @@ export default function DashboardPage() {
         setArrivalDetails(data.arrivalDetails);
 
         sessionStorage.removeItem('correctionData'); // Clean up
-    } else {
-        originalCorrectionEntry.current = null;
     }
 
 
@@ -209,47 +205,8 @@ export default function DashboardPage() {
 
   const handleCancelCorrection = () => {
       setCorrectionEntry(null);
-      originalCorrectionEntry.current = null;
       window.location.reload();
   };
-
-  const generateChangeLog = (original: HistoryEntry, current: CalculationData, currentStock: StockItem[], currentArrivals: ArrivalItem[], currentExpenses: Expense[]): string[] => {
-      const changes: string[] = [];
-      const f = (val: number) => val.toLocaleString() + ' FCFA';
-
-      // Simple fields
-      if(original.managerName !== current.managerName) changes.push(`Gérant : "${original.managerName}" ➔ "${current.managerName}"`);
-      if(original.oldStock !== current.oldStock) changes.push(`Stock Ancien : ${f(original.oldStock)} ➔ ${f(current.oldStock)}`);
-      if(original.encaissement !== current.encaissement) changes.push(`Encaissement : ${f(original.encaissement)} ➔ ${f(current.encaissement)}`);
-      if(original.especeGerant !== current.especeGerant) changes.push(`Espèce Gérant : ${f(original.especeGerant)} ➔ ${f(current.especeGerant)}`);
-
-      // Stock Details
-      const originalStockMap = new Map(original.stockDetails.map(item => [item.boisson.nom, item.quantity]));
-      const currentStockMap = new Map(currentStock.map(item => [item.boisson.nom, item.quantity]));
-      const allStockKeys = new Set([...originalStockMap.keys(), ...currentStockMap.keys()]);
-      allStockKeys.forEach(key => {
-          const oldQty = originalStockMap.get(key) || 0;
-          const newQty = currentStockMap.get(key) || 0;
-          if(oldQty !== newQty) changes.push(`Stock "${key}" : ${oldQty} ➔ ${newQty}`);
-      });
-      
-      // Expenses
-      const originalExpenseMap = new Map(original.expenseDetails.map(e => [`${e.motif}-${e.montant}`, e]));
-      const currentExpenseMap = new Map(currentExpenses.map(e => [`${e.motif}-${e.montant}`, e]));
-      original.expenseDetails.forEach(exp => {
-        if (!currentExpenseMap.has(`${exp.motif}-${exp.montant}`)) changes.push(`Dépense supprimée : "${exp.motif}" (${f(exp.montant)})`);
-      });
-      currentExpenses.forEach(exp => {
-        if (!originalExpenseMap.has(`${exp.motif}-${exp.montant}`)) changes.push(`Dépense ajoutée : "${exp.motif}" (${f(exp.montant)})`);
-      });
-
-      // Arrivals (simplified: check if total is different)
-      const originalArrivalTotal = original.arrivalDetails.reduce((sum, a) => sum + a.total, 0);
-      if(originalArrivalTotal !== current.arrivalTotal) changes.push(`Total Arrivages : ${f(originalArrivalTotal)} ➔ ${f(current.arrivalTotal)}`);
-
-      return changes;
-  };
-
 
   const handleSaveResults = async (calculationData: CalculationData) => {
     if (!user) {
@@ -259,15 +216,8 @@ export default function DashboardPage() {
     try {
         const batch = writeBatch(db);
         
-        if (correctionEntry && originalCorrectionEntry.current) {
-            // ----- CORRECTION MODE (BUG FIXED) -----
-            const changes = generateChangeLog(originalCorrectionEntry.current, calculationData, stockDetails, arrivalDetails, expenses);
-
-            const newCorrectionLog: CorrectionLog = {
-                dateCorrection: new Date().toISOString(),
-                detailsDesChangements: changes.length > 0 ? changes : ["Aucun changement détecté lors de cette sauvegarde."],
-            };
-
+        if (correctionEntry) {
+            // ----- CORRECTION MODE -----
             const historyEntry: HistoryEntry = {
                 ...calculationData,
                 id: correctionEntry.id, // Use the existing ID
@@ -275,27 +225,23 @@ export default function DashboardPage() {
                 arrivalDetails: arrivalDetails,
                 expenseDetails: expenses,
                 modifieLe: new Date().toISOString(), // Add modification date
-                historiqueCorrections: [...(correctionEntry.historiqueCorrections || []), newCorrectionLog],
             };
-            // Use the EXISTING document reference for update
             const historyDocRef = doc(db, 'users', user.uid, 'history', correctionEntry.id);
-            batch.set(historyDocRef, historyEntry); // Overwrite the existing document
+            batch.set(historyDocRef, historyEntry, { merge: true }); // Use set with merge to be safe
             
             toast({
-                title: changes.length > 0 ? "Succès!" : "Aucune modification",
-                description: changes.length > 0 
-                    ? `L'inventaire du ${format(new Date(calculationData.date), "d MMM yyyy", {locale: fr})} a été corrigé.`
-                    : "Aucun changement n'a été détecté. Le journal a été mis à jour.",
+                title: "Succès!",
+                description: `L'inventaire du ${format(new Date(calculationData.date), "d MMM yyyy", {locale: fr})} a été corrigé.`
             });
 
         } else {
             // ----- NORMAL SAVE MODE -----
              const historyColRef = collection(db, 'users', user.uid, 'history');
-             const newHistoryDoc = doc(historyColRef); // Create a new doc with a generated ID
+             const newHistoryDoc = doc(historyColRef);
              
              const historyEntry: HistoryEntry = {
                  ...calculationData,
-                 id: newHistoryDoc.id, // Assign the generated ID
+                 id: newHistoryDoc.id,
                  stockDetails: stockDetails,
                  arrivalDetails: arrivalDetails,
                  expenseDetails: expenses,
@@ -332,7 +278,6 @@ export default function DashboardPage() {
         
         // Always leave correction mode after saving
         setCorrectionEntry(null);
-        originalCorrectionEntry.current = null;
         
         // Reload the page to ensure a clean state if it was a correction
         if(correctionEntry) {
