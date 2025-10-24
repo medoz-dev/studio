@@ -13,7 +13,7 @@ import CalculationsTab from "@/components/calculations-tab";
 import { useToast } from "@/hooks/use-toast";
 import { useBoissons } from "@/hooks/useBoissons";
 import { Button } from "@/components/ui/button";
-import { Settings, History, LogOut, LifeBuoy, Home, AlertTriangle, Users } from "lucide-react";
+import { Settings, History, LogOut, LifeBuoy, Home, AlertTriangle, Users, BarChart2 } from "lucide-react";
 import { auth } from '@/lib/firebase';
 import type { StockItem } from "@/components/stock-tab";
 import type { ArrivalItem } from "@/components/arrival-tab";
@@ -263,6 +263,19 @@ export default function DashboardPage() {
             // ----- CORRECTION MODE -----
             const changes = generateChangeLog(originalCorrectionEntry.current, calculationData, stockDetails, arrivalDetails, expenses);
 
+            if (changes.length === 0) {
+                 toast({
+                    title: "Aucune modification",
+                    description: "Aucun changement n'a été détecté. La sauvegarde a été annulée.",
+                });
+                // On sort sans faire de commit pour ne pas écraser inutilement.
+                // On peut décider de quand même quitter le mode correction.
+                setCorrectionEntry(null);
+                originalCorrectionEntry.current = null;
+                window.location.reload(); // Pour être sûr de repartir sur une base saine
+                return;
+            }
+
             const newCorrectionLog: CorrectionLog = {
                 dateCorrection: new Date().toISOString(),
                 detailsDesChangements: changes,
@@ -356,6 +369,11 @@ export default function DashboardPage() {
                 <LifeBuoy />
                 <span className="sr-only">Aide</span>
              </Button>
+             <Link href="/analysis">
+                <Button asChild variant="secondary" size="icon" title="Analyse des Performances">
+                    <BarChart2 />
+                </Button>
+            </Link>
              <Link href="/history">
                 <Button asChild variant="secondary" size="icon" title="Historique">
                     <History />
