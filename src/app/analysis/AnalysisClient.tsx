@@ -62,21 +62,26 @@ export default function AnalysisClient() {
 
         try {
             const historyRef = collection(db, 'users', user.uid, 'history');
-            
-            let q = query(
-                historyRef,
-                where('date', '>=', startDate),
-                where('date', '<=', endDate),
-                orderBy('date', 'desc')
-            );
-
             const selectedManager = managers.find(m => m.id === selectedManagerId);
+            
+            let queryConstraints = [];
+
             if (selectedManagerId !== 'all' && selectedManager) {
-                q = query(q, where('managerName', '==', selectedManager.nom));
+                queryConstraints.push(where('managerName', '==', selectedManager.nom));
             }
+            
+            queryConstraints.push(where('date', '>=', startDate));
+            queryConstraints.push(where('date', '<=', endDate));
+            queryConstraints.push(orderBy('date', 'desc'));
+
+            const q = query(historyRef, ...queryConstraints);
 
             const querySnapshot = await getDocs(q);
             const entries = querySnapshot.docs.map(doc => doc.data() as HistoryEntry);
+
+            if (entries.length === 0 && selectedManagerId !== 'all') {
+                toast({ title: "Aucun résultat", description: `Aucun inventaire trouvé pour ${selectedManager?.nom} dans cette période.` });
+            }
 
             let netBalance = 0;
             let totalMissing = 0;
@@ -103,7 +108,17 @@ export default function AnalysisClient() {
 
         } catch (error: any) {
             console.error("Erreur lors de l'analyse:", error);
-            toast({ title: "Erreur", description: error.message || "Impossible de récupérer les données.", variant: "destructive" });
+            // We check for the specific Firestore error for missing index
+            if (error.code === 'failed-precondition') {
+                 toast({ 
+                    title: "Action Requise", 
+                    description: "Un index de base de données est nécessaire. Suivez le lien dans la console du navigateur pour le créer.", 
+                    variant: "destructive",
+                    duration: 10000 
+                });
+            } else {
+                toast({ title: "Erreur", description: error.message || "Impossible de récupérer les données.", variant: "destructive" });
+            }
         } finally {
             setIsLoading(false);
         }
