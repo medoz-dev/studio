@@ -177,7 +177,7 @@ export default function DashboardPage() {
       unsubArrivals();
       unsubHistory();
     };
-  }, [user]);
+  }, [user, correctionEntry]);
 
   // Sync arrivalTotal when arrivalDetails changes
    useEffect(() => {
@@ -263,22 +263,9 @@ export default function DashboardPage() {
             // ----- CORRECTION MODE -----
             const changes = generateChangeLog(originalCorrectionEntry.current, calculationData, stockDetails, arrivalDetails, expenses);
 
-            if (changes.length === 0) {
-                 toast({
-                    title: "Aucune modification",
-                    description: "Aucun changement n'a été détecté. La sauvegarde a été annulée.",
-                });
-                // On sort sans faire de commit pour ne pas écraser inutilement.
-                // On peut décider de quand même quitter le mode correction.
-                setCorrectionEntry(null);
-                originalCorrectionEntry.current = null;
-                window.location.reload(); // Pour être sûr de repartir sur une base saine
-                return;
-            }
-
             const newCorrectionLog: CorrectionLog = {
                 dateCorrection: new Date().toISOString(),
-                detailsDesChangements: changes,
+                detailsDesChangements: changes.length > 0 ? changes : ["Aucun changement détecté lors de cette sauvegarde."],
             };
 
             const historyEntry: HistoryEntry = {
@@ -292,48 +279,64 @@ export default function DashboardPage() {
             };
             const historyDocRef = doc(db, 'users', user.uid, 'history', correctionEntry.id);
             batch.set(historyDocRef, historyEntry); // Overwrite the existing document
+            
             toast({
-                title: "Succès!",
-                description: `L'inventaire du ${format(new Date(calculationData.date), "d MMM yyyy", {locale: fr})} a été corrigé.`,
+                title: changes.length > 0 ? "Succès!" : "Aucune modification",
+                description: changes.length > 0 
+                    ? `L'inventaire du ${format(new Date(calculationData.date), "d MMM yyyy", {locale: fr})} a été corrigé.`
+                    : "Aucun changement n'a été détecté. Le journal a été mis à jour.",
             });
+
         } else {
             // ----- NORMAL SAVE MODE -----
-            const historyEntry: Omit<HistoryEntry, 'id'> = {
-                ...calculationData,
-                stockDetails: stockDetails,
-                arrivalDetails: arrivalDetails,
-                expenseDetails: expenses,
-            };
-            const historyColRef = collection(db, 'users', user.uid, 'history');
-            const newHistoryDoc = doc(historyColRef);
-            batch.set(newHistoryDoc, historyEntry);
+             const historyColRef = collection(db, 'users', user.uid, 'history');
+             const newHistoryDoc = doc(historyColRef); // Create a new doc with a generated ID
+             
+             const historyEntry: HistoryEntry = {
+                 ...calculationData,
+                 id: newHistoryDoc.id, // Assign the generated ID
+                 stockDetails: stockDetails,
+                 arrivalDetails: arrivalDetails,
+                 expenseDetails: expenses,
+             };
+             batch.set(newHistoryDoc, historyEntry);
+
             toast({
                 title: "Succès!",
                 description: `Résultats pour ${calculationData.managerName} enregistrés dans l'historique!`,
             });
-        }
 
-        // Clear current arrivals by deleting all documents in the collection
-        const arrivalsColRef = collection(db, 'users', user.uid, 'currentArrivals');
-        const arrivalsSnapshot = await getDocs(arrivalsColRef);
-        arrivalsSnapshot.forEach((doc) => {
-            batch.delete(doc.ref);
-        });
-        
-        // Clear stock quantities
-        const quantitiesDocRef = doc(db, 'users', user.uid, 'inventoryState', 'stockQuantities');
-        batch.set(quantitiesDocRef, {});
+            // Clear current arrivals by deleting all documents in the collection
+            const arrivalsColRef = collection(db, 'users', user.uid, 'currentArrivals');
+            const arrivalsSnapshot = await getDocs(arrivalsColRef);
+            arrivalsSnapshot.forEach((doc) => {
+                batch.delete(doc.ref);
+            });
+            
+            // Clear stock quantities
+            const quantitiesDocRef = doc(db, 'users', user.uid, 'inventoryState', 'stockQuantities');
+            batch.set(quantitiesDocRef, {});
+        }
 
         await batch.commit();
 
-        // Reset state after saving
-        setManagerName('');
-        setEncaissement(0);
-        setExpenses([]);
-        setEspeceGerant(0);
+        // Reset state after saving, only if it wasn't a correction
+        if (!correctionEntry) {
+            setManagerName('');
+            setEncaissement(0);
+            setExpenses([]);
+            setEspeceGerant(0);
+            setCalculationDate(new Date().toISOString().split('T')[0]); // Reset date for next time
+        }
+        
+        // Always leave correction mode after saving
         setCorrectionEntry(null);
         originalCorrectionEntry.current = null;
-        setCalculationDate(new Date().toISOString().split('T')[0]); // Reset date for next time
+        
+        // Reload the page to ensure a clean state if it was a correction
+        if(correctionEntry) {
+            window.location.reload();
+        }
 
     } catch (error) {
         console.error("Failed to save results to Firestore", error);
