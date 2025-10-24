@@ -33,4 +33,10 @@ export interface HistoryEntry extends CalculationData {
     historiqueCorrections?: CorrectionLog[]; // New: Detailed log of changes
 }
 
+export interface Manager {
+    id: string; // Firestore ID
+    nom: string;
+    telephone: string;
+    dateEntree: string; // ISO date string
+}
     

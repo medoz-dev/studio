@@ -13,7 +13,7 @@ import CalculationsTab from "@/components/calculations-tab";
 import { useToast } from "@/hooks/use-toast";
 import { useBoissons } from "@/hooks/useBoissons";
 import { Button } from "@/components/ui/button";
-import { Settings, History, LogOut, LifeBuoy, Home, AlertTriangle } from "lucide-react";
+import { Settings, History, LogOut, LifeBuoy, Home, AlertTriangle, Users } from "lucide-react";
 import { auth } from '@/lib/firebase';
 import type { StockItem } from "@/components/stock-tab";
 import type { ArrivalItem } from "@/components/arrival-tab";
@@ -23,6 +23,7 @@ import { differenceInDays, format, addDays, isBefore } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import HelpDialog from "@/components/HelpDialog";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useManagers } from "@/hooks/useManagers";
 
 
 function SubscriptionStatus({ subscriptionEndDate, creationDate }: { subscriptionEndDate: Date | null, creationDate: string | null }) {
@@ -65,6 +66,7 @@ export default function DashboardPage() {
   const [stockQuantities, setStockQuantities] = useState<Record<string, number>>({});
   const { toast } = useToast();
   const { boissons, isLoading } = useBoissons();
+  const { managers } = useManagers();
   const { user } = useAuth();
   const [userName, setUserName] = useState('');
   const [subscriptionEndDate, setSubscriptionEndDate] = useState<Date | null>(null);
@@ -427,6 +429,7 @@ export default function DashboardPage() {
               especeGerant={especeGerant}
               setEspeceGerant={setEspeceGerant}
               isCorrectionMode={!!correctionEntry}
+              managers={managers}
             />
           </TabsContent>
         </Tabs>

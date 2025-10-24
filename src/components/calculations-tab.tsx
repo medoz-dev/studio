@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -9,9 +10,11 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Trash2, Save, Printer, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { CalculationData } from '@/lib/types';
+import type { CalculationData, Manager } from '@/lib/types';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import Link from 'next/link';
 
 export interface Expense {
     id: number;
@@ -36,6 +39,7 @@ interface CalculationsTabProps {
     especeGerant: number;
     setEspeceGerant: (value: number) => void;
     isCorrectionMode?: boolean;
+    managers: Manager[];
 }
 
 const SummaryItem = ({ label, value }: { label: string, value: string }) => (
@@ -62,6 +66,7 @@ export default function CalculationsTab({
     especeGerant,
     setEspeceGerant,
     isCorrectionMode = false,
+    managers,
 }: CalculationsTabProps) {
     const [oldStockInput, setOldStockInput] = useState(initialOldStock.toString());
     const [newExpenseMotif, setNewExpenseMotif] = useState('');
@@ -118,7 +123,7 @@ export default function CalculationsTab({
 
     const handleCalculateFinal = () => {
         if (!managerName.trim()) {
-            toast({ title: "Attention", description: "Veuillez entrer le nom du gérant avant de calculer.", variant: "destructive" });
+            toast({ title: "Attention", description: "Veuillez sélectionner un gérant avant de calculer.", variant: "destructive" });
             return;
         }
         setShowFinalResult(true);
@@ -126,7 +131,7 @@ export default function CalculationsTab({
 
     const handleSave = () => {
         if (!managerName.trim() || !showFinalResult) {
-            toast({ title: "Attention", description: "Veuillez d'abord entrer le nom du gérant et cliquer sur 'Calculer' avant d'enregistrer.", variant: "destructive" });
+            toast({ title: "Attention", description: "Veuillez d'abord sélectionner un gérant et cliquer sur 'Calculer' avant d'enregistrer.", variant: "destructive" });
             return;
         }
         const calculationData: CalculationData = {
@@ -152,7 +157,7 @@ export default function CalculationsTab({
         if (!managerName.trim()) {
             toast({
                 title: "Attention",
-                description: "Veuillez entrer le nom du gérant avant d'imprimer.",
+                description: "Veuillez sélectionner un gérant avant d'imprimer.",
                 variant: "destructive"
             });
             return;
@@ -178,9 +183,29 @@ export default function CalculationsTab({
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <div className="space-y-2">
+                         <div className="space-y-2">
                              <Label htmlFor="managerName">Nom du Gérant</Label>
-                             <Input id="managerName" value={managerName} onChange={(e) => setManagerName(e.target.value)} placeholder="Entrez le nom du gérant de caisse..." />
+                             <Select value={managerName} onValueChange={setManagerName}>
+                                <SelectTrigger id="managerName">
+                                    <SelectValue placeholder="Sélectionnez un gérant" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {managers.length > 0 ? (
+                                        managers.map(manager => (
+                                            <SelectItem key={manager.id} value={manager.nom}>
+                                                {manager.nom}
+                                            </SelectItem>
+                                        ))
+                                    ) : (
+                                        <div className="p-4 text-center text-sm text-muted-foreground">
+                                            Aucun gérant trouvé.
+                                            <Link href="/admin/managers" className="text-primary underline block mt-2">
+                                                Ajouter un gérant
+                                            </Link>
+                                        </div>
+                                    )}
+                                </SelectContent>
+                            </Select>
                         </div>
                          <div className="space-y-2">
                             <Label htmlFor="calculationDate">Date du Calcul</Label>
