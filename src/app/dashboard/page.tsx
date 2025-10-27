@@ -13,7 +13,7 @@ import CalculationsTab from "@/components/calculations-tab";
 import { useToast } from "@/hooks/use-toast";
 import { useBoissons } from "@/hooks/useBoissons";
 import { Button } from "@/components/ui/button";
-import { Settings, History, LogOut, LifeBuoy, Home, AlertTriangle, Users, BarChart2, Menu, User } from "lucide-react";
+import { Settings, History, LogOut, LifeBuoy, Home, AlertTriangle, Users, BarChart2, Menu, User, KeyRound } from "lucide-react";
 import { auth } from '@/lib/firebase';
 import type { StockItem } from "@/components/stock-tab";
 import type { ArrivalItem } from "@/components/arrival-tab";
@@ -34,6 +34,7 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
 
 
 function SubscriptionStatus({ subscriptionEndDate, creationDate }: { subscriptionEndDate: Date | null, creationDate: string | null }) {
@@ -69,6 +70,7 @@ function SubscriptionStatus({ subscriptionEndDate, creationDate }: { subscriptio
 
 function AccountDialog({ isOpen, setIsOpen, user, userName, setUserNameState }: { isOpen: boolean, setIsOpen: (open: boolean) => void, user: any, userName: string, setUserNameState: (name: string) => void }) {
     const [name, setName] = useState(userName);
+    const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
     const { toast } = useToast();
 
     useEffect(() => {
@@ -88,7 +90,7 @@ function AccountDialog({ isOpen, setIsOpen, user, userName, setUserNameState }: 
         const userDocRef = doc(db, 'users', user.uid);
         try {
             await updateDoc(userDocRef, { name: name.trim() });
-            setUserNameState(name.trim()); // Optimistically update the state
+            setUserNameState(name.trim()); 
             toast({ title: "Succès", description: "Votre nom a été mis à jour." });
             setIsOpen(false);
         } catch (error: any) {
@@ -96,27 +98,134 @@ function AccountDialog({ isOpen, setIsOpen, user, userName, setUserNameState }: 
             toast({ title: "Erreur", description: "Impossible de mettre à jour le nom.", variant: "destructive" });
         }
     };
+    
+    const handleOpenPasswordDialog = () => {
+        setIsOpen(false); // Close account dialog
+        setIsPasswordDialogOpen(true); // Open password dialog
+    }
 
+    return (
+        <>
+            <Dialog open={isOpen} onOpenChange={setIsOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Mon Compte</DialogTitle>
+                        <DialogDescription>Gérez les informations de votre profil.</DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="space-y-2">
+                            <Label>Email</Label>
+                            <Input value={user?.email || ''} disabled />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="name">Nom d'affichage</Label>
+                            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
+                        </div>
+                        <div className="pt-4">
+                             <Button variant="outline" onClick={handleOpenPasswordDialog} className="w-full">
+                                <KeyRound className="mr-2 h-4 w-4" />
+                                Changer mon mot de passe
+                             </Button>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsOpen(false)}>Annuler</Button>
+                        <Button onClick={handleSave}>Enregistrer</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+            <PasswordChangeDialog
+                isOpen={isPasswordDialogOpen}
+                setIsOpen={setIsPasswordDialogOpen}
+                user={user}
+            />
+        </>
+    );
+}
+
+
+function PasswordChangeDialog({ isOpen, setIsOpen, user }: { isOpen: boolean, setIsOpen: (open: boolean) => void, user: any }) {
+    const [oldPassword, setOldPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
+    const { toast } = useToast();
+
+    const handlePasswordChange = async () => {
+        if (!user || !user.email) {
+            toast({ title: "Erreur", description: "Session utilisateur invalide.", variant: "destructive" });
+            return;
+        }
+        if (!oldPassword || !newPassword || !confirmPassword) {
+            toast({ title: "Erreur", description: "Veuillez remplir tous les champs.", variant: "destructive" });
+            return;
+        }
+        if (newPassword !== confirmPassword) {
+            toast({ title: "Erreur", description: "Les nouveaux mots de passe ne correspondent pas.", variant: "destructive" });
+            return;
+        }
+        if (newPassword.length < 6) {
+             toast({ title: "Erreur", description: "Le nouveau mot de passe doit contenir au moins 6 caractères.", variant: "destructive" });
+            return;
+        }
+        
+        setIsSaving(true);
+        
+        try {
+            // Re-authenticate the user for security
+            const credential = EmailAuthProvider.credential(user.email, oldPassword);
+            await reauthenticateWithCredential(user, credential);
+            
+            // If re-authentication is successful, update the password
+            await updatePassword(user, newPassword);
+
+            toast({ title: "Succès", description: "Votre mot de passe a été mis à jour." });
+            setIsOpen(false);
+            // Clear fields for next time
+            setOldPassword('');
+            setNewPassword('');
+            setConfirmPassword('');
+
+        } catch (error: any) {
+            console.error("Error changing password:", error);
+            let errorMessage = "Une erreur est survenue.";
+            if (error.code === 'auth/wrong-password') {
+                errorMessage = "L'ancien mot de passe est incorrect.";
+            } else if (error.code === 'auth/weak-password') {
+                errorMessage = "Le nouveau mot de passe est trop faible.";
+            }
+            toast({ title: "Échec de la modification", description: errorMessage, variant: "destructive" });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+    
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Mon Compte</DialogTitle>
-                    <DialogDescription>Gérez les informations de votre profil.</DialogDescription>
+                    <DialogTitle>Changer le mot de passe</DialogTitle>
+                    <DialogDescription>Pour des raisons de sécurité, veuillez confirmer votre ancien mot de passe.</DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                     <div className="space-y-2">
-                        <Label>Email</Label>
-                        <Input value={user?.email || ''} disabled />
+                        <Label htmlFor="oldPassword">Ancien mot de passe</Label>
+                        <Input id="oldPassword" type="password" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} />
                     </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="name">Nom d'affichage</Label>
-                        <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
+                     <div className="space-y-2">
+                        <Label htmlFor="newPassword">Nouveau mot de passe</Label>
+                        <Input id="newPassword" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="confirmPassword">Confirmer le nouveau mot de passe</Label>
+                        <Input id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsOpen(false)}>Annuler</Button>
-                    <Button onClick={handleSave}>Enregistrer</Button>
+                    <Button variant="outline" onClick={() => setIsOpen(false)} disabled={isSaving}>Annuler</Button>
+                    <Button onClick={handlePasswordChange} disabled={isSaving}>
+                        {isSaving ? 'Enregistrement...' : 'Enregistrer'}
+                    </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -285,6 +394,13 @@ export default function DashboardPage() {
             // ----- CORRECTION MODE WITH AUDIT LOG -----
             const historyDocRef = doc(db, 'users', user.uid, 'history', correctionEntry.id);
             const originalData = correctionEntry;
+            
+            const batch = writeBatch(db);
+
+            // Fetch the existing document to get the latest modificationLog
+            const docSnap = await getDoc(historyDocRef);
+            const existingData = docSnap.data() as HistoryEntry;
+            
             const changes: ChangeLog[] = [];
 
             // Compare main calculation fields
@@ -339,13 +455,11 @@ export default function DashboardPage() {
                     arrivalDetails: arrivalDetails,
                     expenseDetails: expenses,
                     modifieLe: modification.dateModification, // ensure this is updated
-                    modificationLog: arrayUnion(modification) as any, // This is how you add to an array
+                    modificationLog: arrayUnion(modification) as any
                 };
                 
-                // We must use `updateDoc` to use `arrayUnion`
-                await updateDoc(historyDocRef, {
-                    ...updatedHistoryEntry,
-                });
+                // We use updateDoc which supports arrayUnion
+                updateDoc(historyDocRef, updatedHistoryEntry);
 
                 toast({
                     title: "Correction Enregistrée!",
@@ -368,7 +482,7 @@ export default function DashboardPage() {
                 stockDetails: stockDetails,
                 arrivalDetails: arrivalDetails,
                 expenseDetails: expenses,
-                modificationLog: [], // Initialize with empty array
+                modificationLog: [],
             };
             batch.set(newHistoryDoc, historyEntry);
 
@@ -580,5 +694,3 @@ export default function DashboardPage() {
     </>
   );
 }
-
-    
