@@ -43,9 +43,9 @@ export default function ArrivalTab({ onArrivalUpdate, boissons, initialArrivals 
 
   // This effect handles the initial setup and Firestore subscription
   useEffect(() => {
+    // In correction mode, the state is managed internally. The initial value is set once.
     if (isCorrectionMode) {
       setAllArrivals(initialArrivals || []);
-      // No need to call onArrivalUpdate here, it will be called by the parent effect in dashboard
       return;
     }
 
@@ -66,7 +66,7 @@ export default function ArrivalTab({ onArrivalUpdate, boissons, initialArrivals 
   }, [user, isCorrectionMode, initialArrivals]);
   
   // This effect reports updates to the parent component.
-  // The dependency array is crucial to prevent infinite loops.
+  // It is now the only place that calls onArrivalUpdate.
   useEffect(() => {
     const total = allArrivals.reduce((acc, arrival) => acc + arrival.total, 0);
     onArrivalUpdate(total, allArrivals);
@@ -412,4 +412,3 @@ function ArrivalDetailsDialog({ isOpen, setIsOpen, arrival }: ArrivalDetailsDial
     </Dialog>
   );
 }
-
