@@ -13,7 +13,7 @@ import CalculationsTab from "@/components/calculations-tab";
 import { useToast } from "@/hooks/use-toast";
 import { useBoissons } from "@/hooks/useBoissons";
 import { Button } from "@/components/ui/button";
-import { Settings, History, LogOut, LifeBuoy, Home, AlertTriangle, Users, BarChart2, Menu, User, KeyRound } from "lucide-react";
+import { Settings, History, LogOut, LifeBuoy, Home, AlertTriangle, Users, BarChart2, Menu, User, KeyRound, SlidersHorizontal } from "lucide-react";
 import { auth } from '@/lib/firebase';
 import type { StockItem } from "@/components/stock-tab";
 import type { ArrivalItem } from "@/components/arrival-tab";
@@ -390,57 +390,42 @@ export default function DashboardPage() {
       return;
     }
     try {
-        if (correctionEntry) {
-            // ----- CORRECTION MODE WITH AUDIT LOG -----
-            const historyDocRef = doc(db, 'users', user.uid, 'history', correctionEntry.id);
-            const originalData = correctionEntry;
-            
-            const batch = writeBatch(db);
+        const historyDocRef = correctionEntry 
+            ? doc(db, 'users', user.uid, 'history', correctionEntry.id)
+            : doc(collection(db, 'users', user.uid, 'history'));
 
-            // Fetch the existing document to get the latest modificationLog
-            const docSnap = await getDoc(historyDocRef);
-            const existingData = docSnap.data() as HistoryEntry;
-            
+        const batch = writeBatch(db);
+
+        const newHistoryData: HistoryEntry = {
+            ...calculationData,
+            id: historyDocRef.id,
+            stockDetails: stockDetails,
+            arrivalDetails: arrivalDetails,
+            expenseDetails: expenses,
+            modificationLog: [], // Initialize for new entries
+        };
+
+        if (correctionEntry) {
+            // --- CORRECTION MODE ---
+            const originalData = correctionEntry;
             const changes: ChangeLog[] = [];
 
             // Compare main calculation fields
-            const fieldsToCompare: (keyof CalculationData)[] = ['oldStock', 'encaissement', 'especeGerant'];
-            fieldsToCompare.forEach(field => {
-                if (originalData[field] !== calculationData[field]) {
+            (Object.keys(calculationData) as Array<keyof CalculationData>).forEach(key => {
+                if (calculationData[key] !== originalData[key as keyof CalculationData]) {
                     changes.push({
-                        champ: field,
-                        ancienneValeur: originalData[field],
-                        nouvelleValeur: calculationData[field]
+                        champ: key,
+                        ancienneValeur: originalData[key as keyof CalculationData],
+                        nouvelleValeur: calculationData[key]
                     });
                 }
             });
-
-            // Compare stock quantities
-            const originalStockMap = new Map(originalData.stockDetails.map(item => [item.boisson.nom, item.quantity]));
-            const newStockMap = new Map(stockDetails.map(item => [item.boisson.nom, item.quantity]));
-            const allStockKeys = new Set([...originalStockMap.keys(), ...newStockMap.keys()]);
-            allStockKeys.forEach(key => {
-                const oldQty = originalStockMap.get(key) || 0;
-                const newQty = newStockMap.get(key) || 0;
-                if (oldQty !== newQty) {
-                    changes.push({
-                        champ: `Stock - ${key}`,
-                        ancienneValeur: oldQty,
-                        nouvelleValeur: newQty,
-                    });
-                }
-            });
-
-            // This is a simplified comparison for expenses and arrivals.
-            const originalExpensesTotal = originalData.expenseDetails.reduce((sum, exp) => sum + exp.montant, 0);
-            if (originalExpensesTotal !== calculationData.totalExpenses) {
-                 changes.push({ champ: 'Total Dépenses', ancienneValeur: originalExpensesTotal, nouvelleValeur: calculationData.totalExpenses });
+            
+            // This is a simplified comparison logic. A more robust one would compare item by item.
+            const originalStockTotal = originalData.stockDetails.reduce((sum, item) => sum + item.value, 0);
+            if(originalStockTotal !== newHistoryData.currentStockTotal) {
+                 changes.push({ champ: 'Total Stock Restant', ancienneValeur: originalStockTotal, nouvelleValeur: newHistoryData.currentStockTotal });
             }
-             const originalArrivalsTotal = originalData.arrivalDetails.reduce((sum, arr) => sum + arr.total, 0);
-            if (originalArrivalsTotal !== calculationData.arrivalTotal) {
-                 changes.push({ champ: 'Total Arrivages', ancienneValeur: originalArrivalsTotal, nouvelleValeur: calculationData.arrivalTotal });
-            }
-
 
             if (changes.length > 0) {
                 const modification: Modification = {
@@ -448,18 +433,16 @@ export default function DashboardPage() {
                     changements: changes,
                 };
                 
-                const updatedHistoryEntry: HistoryEntry = {
-                    ...calculationData,
-                    id: correctionEntry.id,
-                    stockDetails: stockDetails,
-                    arrivalDetails: arrivalDetails,
-                    expenseDetails: expenses,
-                    modifieLe: modification.dateModification, // ensure this is updated
-                    modificationLog: arrayUnion(modification) as any
+                // Add new modification to the log
+                const newLog = [...(originalData.modificationLog || []), modification];
+                
+                const updatedData = {
+                    ...newHistoryData,
+                    modifieLe: modification.dateModification,
+                    modificationLog: newLog
                 };
                 
-                // We use updateDoc which supports arrayUnion
-                updateDoc(historyDocRef, updatedHistoryEntry);
+                batch.set(historyDocRef, updatedData); // Using set to overwrite with new calculated values
 
                 toast({
                     title: "Correction Enregistrée!",
@@ -469,22 +452,9 @@ export default function DashboardPage() {
                  toast({ title: "Aucune modification", description: "Aucun changement n'a été détecté." });
             }
 
-
         } else {
-            // ----- NORMAL SAVE MODE -----
-            const batch = writeBatch(db);
-            const historyColRef = collection(db, 'users', user.uid, 'history');
-            const newHistoryDoc = doc(historyColRef);
-             
-            const historyEntry: HistoryEntry = {
-                ...calculationData,
-                id: newHistoryDoc.id,
-                stockDetails: stockDetails,
-                arrivalDetails: arrivalDetails,
-                expenseDetails: expenses,
-                modificationLog: [],
-            };
-            batch.set(newHistoryDoc, historyEntry);
+            // --- NORMAL SAVE MODE ---
+            batch.set(historyDocRef, newHistoryData);
 
             toast({
                 title: "Succès!",
@@ -501,19 +471,20 @@ export default function DashboardPage() {
             // Clear stock quantities
             const quantitiesDocRef = doc(db, 'users', user.uid, 'inventoryState', 'stockQuantities');
             batch.set(quantitiesDocRef, {});
-            
-            await batch.commit();
+        }
+        
+        await batch.commit();
 
-            // Reset state after saving, only if it wasn't a correction
+        // Reset state after saving
+        if (!correctionEntry) {
             setManagerName('');
             setEncaissement(0);
             setExpenses([]);
             setEspeceGerant(0);
-            setCalculationDate(new Date().toISOString().split('T')[0]); // Reset date for next time
+            setCalculationDate(new Date().toISOString().split('T')[0]);
         }
         
-        // Always leave correction mode after saving
-        if(correctionEntry) {
+        if (correctionEntry) {
             setCorrectionEntry(null);
             window.location.reload();
         }
@@ -571,7 +542,7 @@ export default function DashboardPage() {
                 </Link>
                 <Link href="/admin">
                     <Button asChild variant="secondary" size="icon" title="Administration">
-                        <Settings />
+                        <SlidersHorizontal />
                     </Button>
                 </Link>
                 <Button variant="destructive" size="icon" title="Déconnexion" onClick={handleLogout}>
@@ -590,11 +561,11 @@ export default function DashboardPage() {
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                         <DropdownMenuItem onClick={() => setIsAccountOpen(true)}>
+                         <DropdownMenuItem onSelect={() => setIsAccountOpen(true)}>
                             <User className="mr-2 h-4 w-4" />
                             <span>Mon Compte</span>
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setIsHelpOpen(true)}>
+                        <DropdownMenuItem onSelect={() => setIsHelpOpen(true)}>
                             <LifeBuoy className="mr-2 h-4 w-4" />
                             <span>Aide et Infos</span>
                         </DropdownMenuItem>
@@ -612,7 +583,7 @@ export default function DashboardPage() {
                         </Link>
                         <Link href="/admin">
                             <DropdownMenuItem>
-                                <Settings className="mr-2 h-4 w-4" />
+                                <SlidersHorizontal className="mr-2 h-4 w-4" />
                                 <span>Administration</span>
                             </DropdownMenuItem>
                         </Link>
