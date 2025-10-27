@@ -35,15 +35,17 @@ interface ArrivalTabProps {
 }
 
 export default function ArrivalTab({ onArrivalUpdate, boissons, initialArrivals = null }: ArrivalTabProps) {
-  const [allArrivals, setAllArrivals] = useState<ArrivalItem[]>([]);
+  const [allArrivals, setAllArrivals] = useState<ArrivalItem[]>(initialArrivals || []);
   const [selectedArrival, setSelectedArrival] = useState<ArrivalItem | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
   const isCorrectionMode = !!initialArrivals;
 
+  // This effect handles the initial setup and Firestore subscription
   useEffect(() => {
     if (isCorrectionMode) {
       setAllArrivals(initialArrivals || []);
+      // No need to call onArrivalUpdate here, it will be called by the parent effect in dashboard
       return;
     }
 
@@ -62,11 +64,14 @@ export default function ArrivalTab({ onArrivalUpdate, boissons, initialArrivals 
 
     return () => unsubscribe();
   }, [user, isCorrectionMode, initialArrivals]);
-
+  
+  // This effect reports updates to the parent component.
+  // The dependency array is crucial to prevent infinite loops.
   useEffect(() => {
     const total = allArrivals.reduce((acc, arrival) => acc + arrival.total, 0);
     onArrivalUpdate(total, allArrivals);
   }, [allArrivals, onArrivalUpdate]);
+
 
   const handleAddArrival = async (newArrival: Omit<ArrivalItem, 'id'>) => {
     if (isCorrectionMode) {
@@ -407,3 +412,4 @@ function ArrivalDetailsDialog({ isOpen, setIsOpen, arrival }: ArrivalDetailsDial
     </Dialog>
   );
 }
+
