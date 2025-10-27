@@ -1,3 +1,4 @@
+
 import type {Config} from 'tailwindcss';
 
 export default {
@@ -13,6 +14,9 @@ export default {
         body: ['PT Sans', 'sans-serif'],
         headline: ['PT Sans', 'sans-serif'],
         code: ['monospace'],
+        roboto: ['Roboto', 'sans-serif'],
+        lobster: ['Lobster', 'cursive'],
+        merriweather: ['Merriweather', 'serif'],
       },
       colors: {
         background: 'hsl(var(--background))',
@@ -97,3 +101,4 @@ export default {
   },
   plugins: [require('tailwindcss-animate')],
 } satisfies Config;
+

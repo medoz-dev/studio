@@ -25,13 +25,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const docSnap = await getDoc(userDocRef);
 
         if (!docSnap.exists()) {
-          // Document doesn't exist, create it.
+          // Document doesn't exist, create it with default preferences.
           try {
             await setDoc(userDocRef, {
               email: user.email,
               name: user.displayName || user.email,
               createdAt: serverTimestamp(),
               finAbonnement: null,
+              preferences: {
+                font: 'font-body', // Default font
+              }
             });
           } catch (error) {
             console.error("Error creating user document:", error);

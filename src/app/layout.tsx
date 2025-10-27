@@ -1,9 +1,11 @@
+
 import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/context/AuthContext';
 import AuthGuard from '@/components/AuthGuard';
 import { ThemeProvider } from '@/components/ThemeProvider';
+import { UserFontProvider } from '@/context/UserFontContext';
 
 
 export const metadata: Metadata = {
@@ -21,9 +23,9 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&family=Roboto:wght@400;700&family=Lobster&family=Merriweather:wght@400;700&display=swap" rel="stylesheet" />
       </head>
-      <body className="font-body antialiased">
+      <body>
         <ThemeProvider
             attribute="class"
             defaultTheme="system"
@@ -31,9 +33,11 @@ export default function RootLayout({
             disableTransitionOnChange
         >
             <AuthProvider>
+              <UserFontProvider>
                 <AuthGuard>
                     {children}
                 </AuthGuard>
+              </UserFontProvider>
             </AuthProvider>
             <Toaster />
         </ThemeProvider>
@@ -41,3 +45,4 @@ export default function RootLayout({
     </html>
   );
 }
+

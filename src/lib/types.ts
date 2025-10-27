@@ -45,4 +45,8 @@ export interface Manager {
     telephone: string;
     dateEntree: string; // ISO date string
 }
+
+export interface UserPreferences {
+    font?: string;
+}
     

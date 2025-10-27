@@ -13,7 +13,7 @@ import CalculationsTab from "@/components/calculations-tab";
 import { useToast } from "@/hooks/use-toast";
 import { useBoissons } from "@/hooks/useBoissons";
 import { Button } from "@/components/ui/button";
-import { Settings, History, LogOut, LifeBuoy, Home, AlertTriangle, Users, BarChart2, Menu, User, KeyRound, SlidersHorizontal } from "lucide-react";
+import { Settings, History, LogOut, LifeBuoy, Home, AlertTriangle, Users, BarChart2, Menu, User, KeyRound, SlidersHorizontal, Palette } from "lucide-react";
 import { auth } from '@/lib/firebase';
 import type { StockItem } from "@/components/stock-tab";
 import type { ArrivalItem } from "@/components/arrival-tab";
@@ -34,6 +34,7 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
 
 
@@ -68,14 +69,18 @@ function SubscriptionStatus({ subscriptionEndDate, creationDate }: { subscriptio
 }
 
 
-function AccountDialog({ isOpen, setIsOpen, user, userName, setUserNameState }: { isOpen: boolean, setIsOpen: (open: boolean) => void, user: any, userName: string, setUserNameState: (name: string) => void }) {
-    const [name, setName] = useState(userName);
+function AccountDialog({ isOpen, setIsOpen, user, userData }: { isOpen: boolean, setIsOpen: (open: boolean) => void, user: any, userData: any }) {
+    const [name, setName] = useState(userData?.name || '');
+    const [font, setFont] = useState(userData?.preferences?.font || 'font-body');
     const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
     const { toast } = useToast();
 
     useEffect(() => {
-        setName(userName);
-    }, [userName]);
+        if (userData) {
+            setName(userData.name || '');
+            setFont(userData.preferences?.font || 'font-body');
+        }
+    }, [userData]);
 
     const handleSave = async () => {
         if (!user) {
@@ -89,19 +94,24 @@ function AccountDialog({ isOpen, setIsOpen, user, userName, setUserNameState }: 
 
         const userDocRef = doc(db, 'users', user.uid);
         try {
-            await updateDoc(userDocRef, { name: name.trim() });
-            setUserNameState(name.trim()); 
-            toast({ title: "Succès", description: "Votre nom a été mis à jour." });
+            await updateDoc(userDocRef, { 
+                name: name.trim(),
+                preferences: {
+                    ...userData.preferences,
+                    font: font,
+                }
+            });
+            toast({ title: "Succès", description: "Votre profil a été mis à jour." });
             setIsOpen(false);
         } catch (error: any) {
-            console.error("Error updating name:", error);
-            toast({ title: "Erreur", description: "Impossible de mettre à jour le nom.", variant: "destructive" });
+            console.error("Error updating profile:", error);
+            toast({ title: "Erreur", description: "Impossible de mettre à jour le profil.", variant: "destructive" });
         }
     };
     
     const handleOpenPasswordDialog = () => {
-        setIsOpen(false); // Close account dialog
-        setIsPasswordDialogOpen(true); // Open password dialog
+        setIsOpen(false);
+        setIsPasswordDialogOpen(true);
     }
 
     return (
@@ -110,7 +120,7 @@ function AccountDialog({ isOpen, setIsOpen, user, userName, setUserNameState }: 
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Mon Compte</DialogTitle>
-                        <DialogDescription>Gérez les informations de votre profil.</DialogDescription>
+                        <DialogDescription>Gérez les informations de votre profil et vos préférences.</DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         <div className="space-y-2">
@@ -120,6 +130,20 @@ function AccountDialog({ isOpen, setIsOpen, user, userName, setUserNameState }: 
                         <div className="space-y-2">
                             <Label htmlFor="name">Nom d'affichage</Label>
                             <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="font-select">Police de l'application</Label>
+                            <Select value={font} onValueChange={setFont}>
+                                <SelectTrigger id="font-select">
+                                    <SelectValue placeholder="Choisir une police" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="font-body"><span className="font-body">Défaut (PT Sans)</span></SelectItem>
+                                    <SelectItem value="font-roboto"><span className="font-roboto">Moderne (Roboto)</span></SelectItem>
+                                    <SelectItem value="font-merriweather"><span className="font-merriweather">Classique (Merriweather)</span></SelectItem>
+                                    <SelectItem value="font-lobster"><span className="font-lobster">Signature (Lobster)</span></SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div className="pt-4">
                              <Button variant="outline" onClick={handleOpenPasswordDialog} className="w-full">
@@ -172,16 +196,13 @@ function PasswordChangeDialog({ isOpen, setIsOpen, user }: { isOpen: boolean, se
         setIsSaving(true);
         
         try {
-            // Re-authenticate the user for security
             const credential = EmailAuthProvider.credential(user.email, oldPassword);
             await reauthenticateWithCredential(user, credential);
             
-            // If re-authentication is successful, update the password
             await updatePassword(user, newPassword);
 
             toast({ title: "Succès", description: "Votre mot de passe a été mis à jour." });
             setIsOpen(false);
-            // Clear fields for next time
             setOldPassword('');
             setNewPassword('');
             setConfirmPassword('');
@@ -243,7 +264,7 @@ export default function DashboardPage() {
   const { boissons, isLoading } = useBoissons();
   const { managers } = useManagers();
   const { user } = useAuth();
-  const [userName, setUserName] = useState('');
+  const [userData, setUserData] = useState<any>(null);
   const [subscriptionEndDate, setSubscriptionEndDate] = useState<Date | null>(null);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
@@ -291,12 +312,12 @@ export default function DashboardPage() {
     }
 
 
-    // Listener for user's data (name and subscription)
+    // Listener for user's data (name, preferences, and subscription)
     const userDocRef = doc(db, 'users', user.uid);
     const unsubUser = onSnapshot(userDocRef, (docSnap) => {
         if (docSnap.exists()) {
             const data = docSnap.data();
-            setUserName(data.name || '');
+            setUserData(data);
             if (data.finAbonnement && data.finAbonnement instanceof Timestamp) {
                 setSubscriptionEndDate(data.finAbonnement.toDate());
             } else {
@@ -508,7 +529,7 @@ export default function DashboardPage() {
       <header className="bg-primary text-primary-foreground shadow-md no-print">
         <div className="container mx-auto py-6 text-center relative">
           <h1 className="text-4xl font-bold font-headline">Inventaire Pro</h1>
-          <p className="text-lg mt-2">Bienvenue, {userName || user?.email}</p>
+          <p className="text-lg mt-2">Bienvenue, {userData?.name || user?.email}</p>
           <SubscriptionStatus subscriptionEndDate={subscriptionEndDate} creationDate={user?.metadata.creationTime ?? null} />
           <div className="absolute top-1/2 -translate-y-1/2 left-4">
              <Link href="/">
@@ -661,7 +682,7 @@ export default function DashboardPage() {
         )}
       </main>
       <HelpDialog isOpen={isHelpOpen} setIsOpen={setIsHelpOpen} />
-      {user && <AccountDialog isOpen={isAccountOpen} setIsOpen={setIsAccountOpen} user={user} userName={userName} setUserNameState={setUserName} />}
+      {user && <AccountDialog isOpen={isAccountOpen} setIsOpen={setIsAccountOpen} user={user} userData={userData} />}
     </>
   );
 }
