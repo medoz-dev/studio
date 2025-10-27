@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
-import { doc, getDocs, setDoc, onSnapshot, collection, query, orderBy, limit, deleteDoc, addDoc, writeBatch, getDoc, Timestamp, serverTimestamp } from "firebase/firestore";
+import { doc, getDocs, setDoc, onSnapshot, collection, query, orderBy, limit, deleteDoc, addDoc, writeBatch, getDoc, Timestamp, serverTimestamp, updateDoc, arrayUnion } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,7 +18,7 @@ import { auth } from '@/lib/firebase';
 import type { StockItem } from "@/components/stock-tab";
 import type { ArrivalItem } from "@/components/arrival-tab";
 import type { Expense } from "@/components/calculations-tab";
-import type { CalculationData, HistoryEntry } from "@/lib/types";
+import type { CalculationData, HistoryEntry, ChangeLog, Modification } from "@/lib/types";
 import { differenceInDays, format, addDays, isBefore } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import HelpDialog from "@/components/HelpDialog";
@@ -221,39 +221,96 @@ export default function DashboardPage() {
       return;
     }
     try {
-        const batch = writeBatch(db);
-        
         if (correctionEntry) {
-            // ----- CORRECTION MODE -----
-            const historyEntry: HistoryEntry = {
-                ...calculationData,
-                id: correctionEntry.id, // Use the existing ID
-                stockDetails: stockDetails,
-                arrivalDetails: arrivalDetails,
-                expenseDetails: expenses,
-                modifieLe: new Date().toISOString(), // Add/Update modification date
-            };
+            // ----- CORRECTION MODE WITH AUDIT LOG -----
             const historyDocRef = doc(db, 'users', user.uid, 'history', correctionEntry.id);
-            batch.set(historyDocRef, historyEntry, { merge: true });
-            
-            toast({
-                title: "Succès!",
-                description: `L'inventaire du ${format(new Date(calculationData.date), "d MMM yyyy", {locale: fr})} a été corrigé.`
+            const originalData = correctionEntry;
+            const changes: ChangeLog[] = [];
+
+            // Compare main calculation fields
+            const fieldsToCompare: (keyof CalculationData)[] = ['oldStock', 'encaissement', 'especeGerant'];
+            fieldsToCompare.forEach(field => {
+                if (originalData[field] !== calculationData[field]) {
+                    changes.push({
+                        champ: field,
+                        ancienneValeur: originalData[field],
+                        nouvelleValeur: calculationData[field]
+                    });
+                }
             });
+
+            // Compare stock quantities
+            const originalStockMap = new Map(originalData.stockDetails.map(item => [item.boisson.nom, item.quantity]));
+            const newStockMap = new Map(stockDetails.map(item => [item.boisson.nom, item.quantity]));
+            const allStockKeys = new Set([...originalStockMap.keys(), ...newStockMap.keys()]);
+            allStockKeys.forEach(key => {
+                const oldQty = originalStockMap.get(key) || 0;
+                const newQty = newStockMap.get(key) || 0;
+                if (oldQty !== newQty) {
+                    changes.push({
+                        champ: `Stock - ${key}`,
+                        ancienneValeur: oldQty,
+                        nouvelleValeur: newQty,
+                    });
+                }
+            });
+
+            // This is a simplified comparison for expenses and arrivals.
+            const originalExpensesTotal = originalData.expenseDetails.reduce((sum, exp) => sum + exp.montant, 0);
+            if (originalExpensesTotal !== calculationData.totalExpenses) {
+                 changes.push({ champ: 'Total Dépenses', ancienneValeur: originalExpensesTotal, nouvelleValeur: calculationData.totalExpenses });
+            }
+             const originalArrivalsTotal = originalData.arrivalDetails.reduce((sum, arr) => sum + arr.total, 0);
+            if (originalArrivalsTotal !== calculationData.arrivalTotal) {
+                 changes.push({ champ: 'Total Arrivages', ancienneValeur: originalArrivalsTotal, nouvelleValeur: calculationData.arrivalTotal });
+            }
+
+
+            if (changes.length > 0) {
+                const modification: Modification = {
+                    dateModification: new Date().toISOString(),
+                    changements: changes,
+                };
+                
+                const updatedHistoryEntry: HistoryEntry = {
+                    ...calculationData,
+                    id: correctionEntry.id,
+                    stockDetails: stockDetails,
+                    arrivalDetails: arrivalDetails,
+                    expenseDetails: expenses,
+                    modifieLe: modification.dateModification, // ensure this is updated
+                    modificationLog: arrayUnion(modification) as any, // This is how you add to an array
+                };
+                
+                // We must use `updateDoc` to use `arrayUnion`
+                await updateDoc(historyDocRef, {
+                    ...updatedHistoryEntry,
+                });
+
+                toast({
+                    title: "Correction Enregistrée!",
+                    description: `Le journal des modifications a été mis à jour.`
+                });
+            } else {
+                 toast({ title: "Aucune modification", description: "Aucun changement n'a été détecté." });
+            }
+
 
         } else {
             // ----- NORMAL SAVE MODE -----
-             const historyColRef = collection(db, 'users', user.uid, 'history');
-             const newHistoryDoc = doc(historyColRef);
+            const batch = writeBatch(db);
+            const historyColRef = collection(db, 'users', user.uid, 'history');
+            const newHistoryDoc = doc(historyColRef);
              
-             const historyEntry: HistoryEntry = {
-                 ...calculationData,
-                 id: newHistoryDoc.id,
-                 stockDetails: stockDetails,
-                 arrivalDetails: arrivalDetails,
-                 expenseDetails: expenses,
-             };
-             batch.set(newHistoryDoc, historyEntry);
+            const historyEntry: HistoryEntry = {
+                ...calculationData,
+                id: newHistoryDoc.id,
+                stockDetails: stockDetails,
+                arrivalDetails: arrivalDetails,
+                expenseDetails: expenses,
+                modificationLog: [], // Initialize with empty array
+            };
+            batch.set(newHistoryDoc, historyEntry);
 
             toast({
                 title: "Succès!",
@@ -270,12 +327,10 @@ export default function DashboardPage() {
             // Clear stock quantities
             const quantitiesDocRef = doc(db, 'users', user.uid, 'inventoryState', 'stockQuantities');
             batch.set(quantitiesDocRef, {});
-        }
+            
+            await batch.commit();
 
-        await batch.commit();
-
-        // Reset state after saving, only if it wasn't a correction
-        if (!correctionEntry) {
+            // Reset state after saving, only if it wasn't a correction
             setManagerName('');
             setEncaissement(0);
             setExpenses([]);
@@ -284,18 +339,16 @@ export default function DashboardPage() {
         }
         
         // Always leave correction mode after saving
-        setCorrectionEntry(null);
-        
-        // Reload the page to ensure a clean state if it was a correction
         if(correctionEntry) {
+            setCorrectionEntry(null);
             window.location.reload();
         }
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Failed to save results to Firestore", error);
         toast({
             title: "Erreur",
-            description: "Impossible d'enregistrer les résultats.",
+            description: "Impossible d'enregistrer les résultats. " + error.message,
             variant: "destructive",
         });
     }

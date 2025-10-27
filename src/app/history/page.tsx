@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter as TableFoot } from "@/components/ui/table";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { ArrowLeft, Eye, Trash2, Pencil, History as HistoryIcon } from "lucide-react";
+import { ArrowLeft, Eye, Trash2, Pencil, History as HistoryIcon, ScrollText } from "lucide-react";
 import { HistoryEntry } from "@/lib/types";
 import { Separator } from "@/components/ui/separator";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -126,7 +126,7 @@ export default function HistoryPage() {
                                                     <div className="flex flex-col">
                                                         <span className="font-medium">{format(new Date(entry.date), 'd MMMM yyyy', { locale: fr })}</span>
                                                         {entry.modifieLe && (
-                                                             <Badge variant="outline" className="w-fit mt-1" title={format(new Date(entry.modifieLe), 'd MMM yy, HH:mm')}>
+                                                             <Badge variant="outline" className="w-fit mt-1">
                                                                 <HistoryIcon className="h-3 w-3 mr-1" />
                                                                 Corrigé {formatDistanceToNow(new Date(entry.modifieLe), { locale: fr, addSuffix: true })}
                                                             </Badge>
@@ -238,6 +238,36 @@ function HistoryDetailsDialog({ isOpen, setIsOpen, entry }: { isOpen: boolean, s
                                 </div>
                             </AccordionContent>
                         </AccordionItem>
+                        
+                        {(entry.modificationLog && entry.modificationLog.length > 0) && (
+                            <AccordionItem value="audit-log">
+                                <AccordionTrigger className="text-lg font-semibold">
+                                    <div className="flex items-center gap-2">
+                                        <ScrollText /> Journal des Modifications
+                                    </div>
+                                </AccordionTrigger>
+                                <AccordionContent>
+                                    <div className="space-y-4">
+                                        {entry.modificationLog.slice().reverse().map((log, index) => (
+                                            <div key={index} className="border p-4 rounded-md bg-secondary/50">
+                                                <h4 className="font-semibold text-base mb-2">
+                                                    Correction du {format(new Date(log.dateModification), 'd MMMM yyyy à HH:mm', { locale: fr })}
+                                                </h4>
+                                                <ul className="space-y-1 list-disc pl-5 text-sm">
+                                                    {log.changements.map((change, cIndex) => (
+                                                        <li key={cIndex}>
+                                                            <span className="font-medium">{change.champ}:</span>{' '}
+                                                            <span className="text-destructive line-through">{String(change.ancienneValeur)}</span> ➔ {' '}
+                                                            <span className="text-green-600 font-semibold">{String(change.nouvelleValeur)}</span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </AccordionContent>
+                            </AccordionItem>
+                        )}
 
                         <AccordionItem value="stock">
                             <AccordionTrigger className="text-lg font-semibold">Détails du Stock Restant</AccordionTrigger>
