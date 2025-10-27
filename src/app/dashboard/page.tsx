@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -440,48 +441,55 @@ export default function DashboardPage() {
             });
 
             // 1. Compare main fields
-            if (calculationData.managerName !== originalData.managerName) {
-                changes.push(createChange('field', 'Gérant', originalData.managerName, calculationData.managerName));
-            }
-            if (calculationData.encaissement !== originalData.encaissement) {
-                changes.push(createChange('field', 'Encaissement', originalData.encaissement, calculationData.encaissement));
-            }
-            if (calculationData.especeGerant !== originalData.especeGerant) {
-                changes.push(createChange('field', 'Espèce Gérant', originalData.especeGerant, calculationData.especeGerant));
-            }
-            if (calculationData.oldStock !== originalData.oldStock) {
-                changes.push(createChange('field', 'Stock Ancien', originalData.oldStock, calculationData.oldStock));
-            }
+            if (calculationData.managerName !== originalData.managerName) changes.push(createChange('field', 'Gérant', originalData.managerName, calculationData.managerName));
+            if (calculationData.encaissement !== originalData.encaissement) changes.push(createChange('field', 'Encaissement', originalData.encaissement, calculationData.encaissement));
+            if (calculationData.especeGerant !== originalData.especeGerant) changes.push(createChange('field', 'Espèce Gérant', originalData.especeGerant, calculationData.especeGerant));
+            if (calculationData.oldStock !== originalData.oldStock) changes.push(createChange('field', 'Stock Ancien', originalData.oldStock, calculationData.oldStock));
 
             // 2. Compare stock quantities
-            const allStockItems = new Set([...Object.keys(originalData.stockDetails.reduce((acc, i) => ({ ...acc, [i.boisson.nom]: i.quantity }), {})), ...Object.keys(stockDetails.reduce((acc, i) => ({ ...acc, [i.boisson.nom]: i.quantity }), {}))]);
-            allStockItems.forEach(nom => {
-                const oldQty = originalData.stockDetails.find(s => s.boisson.nom === nom)?.quantity || 0;
-                const newQty = stockDetails.find(s => s.boisson.nom === nom)?.quantity || 0;
+            const oldStockMap = originalData.stockDetails.reduce((acc, item) => ({ ...acc, [item.boisson.nom]: item.quantity }), {} as Record<string, number>);
+            const newStockMap = stockDetails.reduce((acc, item) => ({ ...acc, [item.boisson.nom]: item.quantity }), {} as Record<string, number>);
+            const allStockKeys = new Set([...Object.keys(oldStockMap), ...Object.keys(newStockMap)]);
+            allStockKeys.forEach(nom => {
+                const oldQty = oldStockMap[nom] || 0;
+                const newQty = newStockMap[nom] || 0;
                 if (oldQty !== newQty) {
                     changes.push(createChange('stock', nom, oldQty, newQty));
                 }
             });
 
             // 3. Compare expenses
-            const oldExpenses = new Map(originalData.expenseDetails.map(e => [`${e.motif}-${e.montant}`, e]));
-            const newExpenses = new Map(expenses.map(e => [`${e.motif}-${e.montant}`, e]));
-            
-            oldExpenses.forEach((expense, key) => {
-                if (!newExpenses.has(key)) {
-                    changes.push(createChange('expense_removed', expense.motif, expense.montant, ''));
+            const oldExpensesMap = new Map(originalData.expenseDetails.map(e => [e.motif, e]));
+            const newExpensesMap = new Map(expenses.map(e => [e.motif, e]));
+            originalData.expenseDetails.forEach(oldExpense => {
+                if (!newExpensesMap.has(oldExpense.motif)) {
+                    changes.push(createChange('expense_removed', oldExpense.motif, oldExpense.montant, ''));
                 }
             });
-            newExpenses.forEach((expense, key) => {
-                if (!oldExpenses.has(key)) {
-                    changes.push(createChange('expense_added', expense.motif, '', expense.montant));
+            expenses.forEach(newExpense => {
+                if (!oldExpensesMap.has(newExpense.motif)) {
+                    changes.push(createChange('expense_added', newExpense.motif, '', newExpense.montant));
                 }
             });
+
+            // 4. Compare arrivals
+            const oldArrivalItems = new Map(originalData.arrivalDetails.flatMap(a => a.details.map(d => [`${a.date}-${d.nom}`, d])));
+            const newArrivalItems = new Map(arrivalDetails.flatMap(a => a.details.map(d => [`${a.date}-${d.nom}`, d])));
             
-            // Note: Arrival comparison logic is complex due to its structure. For now, we compare totals.
-            if(calculationData.arrivalTotal !== originalData.arrivalTotal) {
-                 changes.push(createChange('field', 'Total Arrivages', originalData.arrivalTotal, calculationData.arrivalTotal));
-            }
+            newArrivalItems.forEach((newItem, key) => {
+                const oldItem = oldArrivalItems.get(key);
+                if (!oldItem) { // Item added
+                    changes.push(createChange('arrival_added', newItem.nom, '', newItem.quantite));
+                } else if (oldItem.quantite !== newItem.quantite) { // Item modified
+                    changes.push(createChange('arrival_modified', newItem.nom, oldItem.quantite, newItem.quantite));
+                }
+            });
+            oldArrivalItems.forEach((oldItem, key) => {
+                if (!newArrivalItems.has(key)) { // Item removed
+                    changes.push(createChange('arrival_removed', oldItem.nom, oldItem.quantite, ''));
+                }
+            });
+
 
             if (changes.length > 0) {
                 const modification: Modification = {

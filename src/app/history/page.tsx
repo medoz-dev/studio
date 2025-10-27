@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -12,7 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter as TableFoot } from "@/components/ui/table";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { ArrowLeft, Eye, Trash2, Pencil, History as HistoryIcon, ScrollText, PlusCircle, MinusCircle, ArrowRight } from "lucide-react";
+import { ArrowLeft, Eye, Trash2, Pencil, History as HistoryIcon, ScrollText, PlusCircle, MinusCircle, ArrowRight, PackagePlus, PackageMinus, PackageSearch } from "lucide-react";
 import { HistoryEntry, ChangeLog } from "@/lib/types";
 import { Separator } from "@/components/ui/separator";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -200,11 +201,17 @@ export default function HistoryPage() {
 const renderChange = (change: ChangeLog) => {
     switch (change.type) {
         case 'stock':
-            return <>Modification stock <strong>{change.champ}</strong> : <span className="font-mono">{change.ancienneValeur}</span> <ArrowRight className="inline h-3 w-3 mx-1" /> <span className="font-mono">{change.nouvelleValeur}</span></>;
+            return <>Stock <strong>{change.champ}</strong> modifié : <span className="font-mono">{change.ancienneValeur}</span> <ArrowRight className="inline h-3 w-3 mx-1" /> <span className="font-mono">{change.nouvelleValeur}</span></>;
         case 'expense_added':
             return <>Dépense ajoutée : <strong>{change.champ}</strong> ({Number(change.nouvelleValeur).toLocaleString()} FCFA)</>;
         case 'expense_removed':
             return <>Dépense supprimée : <strong>{change.champ}</strong> ({Number(change.ancienneValeur).toLocaleString()} FCFA)</>;
+        case 'arrival_added':
+            return <>Arrivage ajouté : <strong>{change.champ}</strong> (x{change.nouvelleValeur})</>;
+        case 'arrival_removed':
+            return <>Arrivage supprimé : <strong>{change.champ}</strong> (x{change.ancienneValeur})</>;
+        case 'arrival_modified':
+            return <>Arrivage <strong>{change.champ}</strong> modifié : <span className="font-mono">x{change.ancienneValeur}</span> <ArrowRight className="inline h-3 w-3 mx-1" /> <span className="font-mono">x{change.nouvelleValeur}</span></>;
         case 'field':
             const formatValue = (value: any) => typeof value === 'number' ? `${Number(value).toLocaleString()} FCFA` : String(value);
             return <>{change.champ} modifié : <span className="text-destructive line-through">{formatValue(change.ancienneValeur)}</span> <ArrowRight className="inline h-3 w-3 mx-1" /> <span className="text-green-600 font-semibold">{formatValue(change.nouvelleValeur)}</span></>;
@@ -219,6 +226,12 @@ const getChangeIcon = (change: ChangeLog) => {
             return <PlusCircle className="h-4 w-4 text-green-600" />;
         case 'expense_removed':
             return <MinusCircle className="h-4 w-4 text-destructive" />;
+        case 'arrival_added':
+            return <PackagePlus className="h-4 w-4 text-blue-600" />;
+        case 'arrival_removed':
+            return <PackageMinus className="h-4 w-4 text-orange-600" />;
+        case 'arrival_modified':
+            return <PackageSearch className="h-4 w-4 text-purple-600" />;
         default:
             return <Pencil className="h-4 w-4 text-muted-foreground" />;
     }

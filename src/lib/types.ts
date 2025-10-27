@@ -1,4 +1,5 @@
 
+
 import type { ArrivalItem } from "@/components/arrival-tab";
 import type { Expense } from "@/components/calculations-tab";
 import type { StockItem } from "@/components/stock-tab";
@@ -20,7 +21,7 @@ export interface CalculationData {
 }
 
 export interface ChangeLog {
-    type: 'stock' | 'expense_added' | 'expense_removed' | 'field';
+    type: 'stock' | 'expense_added' | 'expense_removed' | 'field' | 'arrival_added' | 'arrival_removed' | 'arrival_modified';
     champ: string;
     ancienneValeur: any;
     nouvelleValeur: any;
