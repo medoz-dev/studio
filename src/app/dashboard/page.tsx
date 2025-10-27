@@ -13,7 +13,7 @@ import CalculationsTab from "@/components/calculations-tab";
 import { useToast } from "@/hooks/use-toast";
 import { useBoissons } from "@/hooks/useBoissons";
 import { Button } from "@/components/ui/button";
-import { Settings, History, LogOut, LifeBuoy, Home, AlertTriangle, Users, BarChart2, Menu } from "lucide-react";
+import { Settings, History, LogOut, LifeBuoy, Home, AlertTriangle, Users, BarChart2, Menu, User } from "lucide-react";
 import { auth } from '@/lib/firebase';
 import type { StockItem } from "@/components/stock-tab";
 import type { ArrivalItem } from "@/components/arrival-tab";
@@ -31,6 +31,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 
 function SubscriptionStatus({ subscriptionEndDate, creationDate }: { subscriptionEndDate: Date | null, creationDate: string | null }) {
@@ -64,6 +67,62 @@ function SubscriptionStatus({ subscriptionEndDate, creationDate }: { subscriptio
 }
 
 
+function AccountDialog({ isOpen, setIsOpen, user, userName, setUserNameState }: { isOpen: boolean, setIsOpen: (open: boolean) => void, user: any, userName: string, setUserNameState: (name: string) => void }) {
+    const [name, setName] = useState(userName);
+    const { toast } = useToast();
+
+    useEffect(() => {
+        setName(userName);
+    }, [userName]);
+
+    const handleSave = async () => {
+        if (!user) {
+            toast({ title: "Erreur", description: "Utilisateur non trouvé.", variant: "destructive" });
+            return;
+        }
+        if (!name.trim()) {
+            toast({ title: "Erreur", description: "Le nom ne peut pas être vide.", variant: "destructive" });
+            return;
+        }
+
+        const userDocRef = doc(db, 'users', user.uid);
+        try {
+            await updateDoc(userDocRef, { name: name.trim() });
+            setUserNameState(name.trim()); // Optimistically update the state
+            toast({ title: "Succès", description: "Votre nom a été mis à jour." });
+            setIsOpen(false);
+        } catch (error: any) {
+            console.error("Error updating name:", error);
+            toast({ title: "Erreur", description: "Impossible de mettre à jour le nom.", variant: "destructive" });
+        }
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Mon Compte</DialogTitle>
+                    <DialogDescription>Gérez les informations de votre profil.</DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="space-y-2">
+                        <Label>Email</Label>
+                        <Input value={user?.email || ''} disabled />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="name">Nom d'affichage</Label>
+                        <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsOpen(false)}>Annuler</Button>
+                    <Button onClick={handleSave}>Enregistrer</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 export default function DashboardPage() {
   const [stockTotal, setStockTotal] = useState(0);
   const [stockDetails, setStockDetails] = useState<StockItem[]>([]);
@@ -78,6 +137,7 @@ export default function DashboardPage() {
   const [userName, setUserName] = useState('');
   const [subscriptionEndDate, setSubscriptionEndDate] = useState<Date | null>(null);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [isAccountOpen, setIsAccountOpen] = useState(false);
 
   // State for correction mode
   const [correctionEntry, setCorrectionEntry] = useState<HistoryEntry | null>(null);
@@ -377,6 +437,10 @@ export default function DashboardPage() {
 
             {/* Desktop Icons */}
             <div className="hidden md:flex items-center gap-2">
+                <Button variant="secondary" size="icon" title="Mon Compte" onClick={() => setIsAccountOpen(true)}>
+                    <User />
+                    <span className="sr-only">Mon Compte</span>
+                </Button>
                 <Button variant="secondary" size="icon" title="Aide et Infos" onClick={() => setIsHelpOpen(true)}>
                     <LifeBuoy />
                     <span className="sr-only">Aide</span>
@@ -412,6 +476,10 @@ export default function DashboardPage() {
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                         <DropdownMenuItem onClick={() => setIsAccountOpen(true)}>
+                            <User className="mr-2 h-4 w-4" />
+                            <span>Mon Compte</span>
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setIsHelpOpen(true)}>
                             <LifeBuoy className="mr-2 h-4 w-4" />
                             <span>Aide et Infos</span>
@@ -508,6 +576,9 @@ export default function DashboardPage() {
         )}
       </main>
       <HelpDialog isOpen={isHelpOpen} setIsOpen={setIsHelpOpen} />
+      {user && <AccountDialog isOpen={isAccountOpen} setIsOpen={setIsAccountOpen} user={user} userName={userName} setUserNameState={setUserName} />}
     </>
   );
 }
+
+    
