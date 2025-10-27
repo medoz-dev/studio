@@ -126,7 +126,7 @@ export default function HistoryPage() {
                                                     <div className="flex flex-col">
                                                         <span className="font-medium">{format(new Date(entry.date), 'd MMMM yyyy', { locale: fr })}</span>
                                                         {entry.modifieLe && (
-                                                             <Badge variant="secondary" className="w-fit mt-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300" title={format(new Date(entry.modifieLe), 'd MMM yy, HH:mm')}>
+                                                             <Badge variant="outline" className="w-fit mt-1" title={format(new Date(entry.modifieLe), 'd MMM yy, HH:mm')}>
                                                                 <HistoryIcon className="h-3 w-3 mr-1" />
                                                                 Corrigé {formatDistanceToNow(new Date(entry.modifieLe), { locale: fr, addSuffix: true })}
                                                             </Badge>
