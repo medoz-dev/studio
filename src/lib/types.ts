@@ -20,9 +20,10 @@ export interface CalculationData {
 }
 
 export interface ChangeLog {
+    type: 'stock' | 'expense_added' | 'expense_removed' | 'field';
     champ: string;
-    ancienneValeur: string | number;
-    nouvelleValeur: string | number;
+    ancienneValeur: any;
+    nouvelleValeur: any;
 }
 
 export interface Modification {

@@ -431,21 +431,55 @@ export default function DashboardPage() {
             const originalData = correctionEntry;
             const changes: ChangeLog[] = [];
 
-            // Compare main calculation fields
-            (Object.keys(calculationData) as Array<keyof CalculationData>).forEach(key => {
-                if (calculationData[key] !== originalData[key as keyof CalculationData]) {
-                    changes.push({
-                        champ: key,
-                        ancienneValeur: originalData[key as keyof CalculationData],
-                        nouvelleValeur: calculationData[key]
-                    });
+            const createChange = (type: ChangeLog['type'], field: string, oldValue: any, newValue: any) => ({
+                type,
+                champ: field,
+                ancienneValeur: oldValue,
+                nouvelleValeur: newValue,
+            });
+
+            // 1. Compare main fields
+            if (calculationData.managerName !== originalData.managerName) {
+                changes.push(createChange('field', 'Gérant', originalData.managerName, calculationData.managerName));
+            }
+            if (calculationData.encaissement !== originalData.encaissement) {
+                changes.push(createChange('field', 'Encaissement', originalData.encaissement, calculationData.encaissement));
+            }
+            if (calculationData.especeGerant !== originalData.especeGerant) {
+                changes.push(createChange('field', 'Espèce Gérant', originalData.especeGerant, calculationData.especeGerant));
+            }
+            if (calculationData.oldStock !== originalData.oldStock) {
+                changes.push(createChange('field', 'Stock Ancien', originalData.oldStock, calculationData.oldStock));
+            }
+
+            // 2. Compare stock quantities
+            const allStockItems = new Set([...Object.keys(originalData.stockDetails.reduce((acc, i) => ({ ...acc, [i.boisson.nom]: i.quantity }), {})), ...Object.keys(stockDetails.reduce((acc, i) => ({ ...acc, [i.boisson.nom]: i.quantity }), {}))]);
+            allStockItems.forEach(nom => {
+                const oldQty = originalData.stockDetails.find(s => s.boisson.nom === nom)?.quantity || 0;
+                const newQty = stockDetails.find(s => s.boisson.nom === nom)?.quantity || 0;
+                if (oldQty !== newQty) {
+                    changes.push(createChange('stock', nom, oldQty, newQty));
+                }
+            });
+
+            // 3. Compare expenses
+            const oldExpenses = new Map(originalData.expenseDetails.map(e => [`${e.motif}-${e.montant}`, e]));
+            const newExpenses = new Map(expenses.map(e => [`${e.motif}-${e.montant}`, e]));
+            
+            oldExpenses.forEach((expense, key) => {
+                if (!newExpenses.has(key)) {
+                    changes.push(createChange('expense_removed', expense.motif, expense.montant, ''));
+                }
+            });
+            newExpenses.forEach((expense, key) => {
+                if (!oldExpenses.has(key)) {
+                    changes.push(createChange('expense_added', expense.motif, '', expense.montant));
                 }
             });
             
-            // This is a simplified comparison logic. A more robust one would compare item by item.
-            const originalStockTotal = originalData.stockDetails.reduce((sum, item) => sum + item.value, 0);
-            if(originalStockTotal !== newHistoryData.currentStockTotal) {
-                 changes.push({ champ: 'Total Stock Restant', ancienneValeur: originalStockTotal, nouvelleValeur: newHistoryData.currentStockTotal });
+            // Note: Arrival comparison logic is complex due to its structure. For now, we compare totals.
+            if(calculationData.arrivalTotal !== originalData.arrivalTotal) {
+                 changes.push(createChange('field', 'Total Arrivages', originalData.arrivalTotal, calculationData.arrivalTotal));
             }
 
             if (changes.length > 0) {
@@ -454,7 +488,6 @@ export default function DashboardPage() {
                     changements: changes,
                 };
                 
-                // Add new modification to the log
                 const newLog = [...(originalData.modificationLog || []), modification];
                 
                 const updatedData = {
@@ -463,7 +496,7 @@ export default function DashboardPage() {
                     modificationLog: newLog
                 };
                 
-                batch.set(historyDocRef, updatedData); // Using set to overwrite with new calculated values
+                batch.set(historyDocRef, updatedData);
 
                 toast({
                     title: "Correction Enregistrée!",

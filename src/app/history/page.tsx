@@ -12,8 +12,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter as TableFoot } from "@/components/ui/table";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { ArrowLeft, Eye, Trash2, Pencil, History as HistoryIcon, ScrollText } from "lucide-react";
-import { HistoryEntry } from "@/lib/types";
+import { ArrowLeft, Eye, Trash2, Pencil, History as HistoryIcon, ScrollText, PlusCircle, MinusCircle, ArrowRight } from "lucide-react";
+import { HistoryEntry, ChangeLog } from "@/lib/types";
 import { Separator } from "@/components/ui/separator";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
@@ -197,6 +197,34 @@ export default function HistoryPage() {
     );
 }
 
+const renderChange = (change: ChangeLog) => {
+    switch (change.type) {
+        case 'stock':
+            return <>Modification stock <strong>{change.champ}</strong> : <span className="font-mono">{change.ancienneValeur}</span> <ArrowRight className="inline h-3 w-3 mx-1" /> <span className="font-mono">{change.nouvelleValeur}</span></>;
+        case 'expense_added':
+            return <>Dépense ajoutée : <strong>{change.champ}</strong> ({Number(change.nouvelleValeur).toLocaleString()} FCFA)</>;
+        case 'expense_removed':
+            return <>Dépense supprimée : <strong>{change.champ}</strong> ({Number(change.ancienneValeur).toLocaleString()} FCFA)</>;
+        case 'field':
+            const formatValue = (value: any) => typeof value === 'number' ? `${Number(value).toLocaleString()} FCFA` : String(value);
+            return <>{change.champ} modifié : <span className="text-destructive line-through">{formatValue(change.ancienneValeur)}</span> <ArrowRight className="inline h-3 w-3 mx-1" /> <span className="text-green-600 font-semibold">{formatValue(change.nouvelleValeur)}</span></>;
+        default:
+             return <>{change.champ}: {String(change.ancienneValeur)} ➔ {String(change.nouvelleValeur)}</>;
+    }
+};
+
+const getChangeIcon = (change: ChangeLog) => {
+    switch (change.type) {
+        case 'expense_added':
+            return <PlusCircle className="h-4 w-4 text-green-600" />;
+        case 'expense_removed':
+            return <MinusCircle className="h-4 w-4 text-destructive" />;
+        default:
+            return <Pencil className="h-4 w-4 text-muted-foreground" />;
+    }
+};
+
+
 function HistoryDetailsDialog({ isOpen, setIsOpen, entry }: { isOpen: boolean, setIsOpen: (open: boolean) => void, entry: HistoryEntry | null }) {
     if (!entry) return null;
 
@@ -253,12 +281,11 @@ function HistoryDetailsDialog({ isOpen, setIsOpen, entry }: { isOpen: boolean, s
                                                 <h4 className="font-semibold text-base mb-2">
                                                     Correction du {format(new Date(log.dateModification), 'd MMMM yyyy à HH:mm', { locale: fr })}
                                                 </h4>
-                                                <ul className="space-y-1 list-disc pl-5 text-sm">
+                                                <ul className="space-y-2 text-sm">
                                                     {log.changements.map((change, cIndex) => (
-                                                        <li key={cIndex}>
-                                                            <span className="font-medium">{change.champ}:</span>{' '}
-                                                            <span className="text-destructive line-through">{String(change.ancienneValeur)}</span> ➔ {' '}
-                                                            <span className="text-green-600 font-semibold">{String(change.nouvelleValeur)}</span>
+                                                        <li key={cIndex} className="flex items-start gap-3">
+                                                            <div className="pt-0.5">{getChangeIcon(change)}</div>
+                                                            <span className="flex-1">{renderChange(change)}</span>
                                                         </li>
                                                     ))}
                                                 </ul>
