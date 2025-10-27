@@ -31,7 +31,7 @@ export default function LandingPage() {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 grid gap-10 md:grid-cols-2 md:items-center">
             <div className="space-y-6">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-primary">
-                Transformez la gestion de votre bar, libérez votre potentiel.
+                Reprenez le contrôle. Maximisez vos profits.
               </h1>
               <p className="max-w-xl text-lg text-muted-foreground">
                 Inventaire Pro est l'outil ultime pour les gérants de bars et restaurants au Bénin. Arrêtez de perdre du temps et de l'argent avec les cahiers. Automatisez vos inventaires, détectez les manquants et prenez le contrôle total pour faire grandir votre business.
@@ -44,12 +44,12 @@ export default function LandingPage() {
             </div>
             <div className="flex justify-center">
                 <Image 
-                    src="https://picsum.photos/seed/business%20growth/600/500"
-                    alt="Graphique de croissance symbolisant le succès d'une entreprise"
+                    src="https://picsum.photos/seed/business%20control/600/500"
+                    alt="Tableau de bord de gestion d'entreprise"
                     width={600}
                     height={500}
                     className="rounded-xl shadow-2xl"
-                    data-ai-hint="business growth"
+                    data-ai-hint="business control"
                 />
             </div>
           </div>
@@ -272,3 +272,5 @@ function StepCard({ icon, step, title, description }: { icon: React.ReactNode, s
         </div>
     );
 }
+
+    
