@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -13,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter as TableFoot } from "@/components/ui/table";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { ArrowLeft, Eye, Trash2, Pencil } from "lucide-react";
+import { ArrowLeft, Eye, Trash2, Pencil, History as HistoryIcon } from "lucide-react";
 import { HistoryEntry } from "@/lib/types";
 import { Separator } from "@/components/ui/separator";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -114,7 +113,7 @@ export default function HistoryPage() {
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>Date</TableHead>
+                                            <TableHead>Date & Statut</TableHead>
                                             <TableHead>Gérant</TableHead>
                                             <TableHead>Résultat</TableHead>
                                             <TableHead className="text-right">Actions</TableHead>
@@ -125,15 +124,16 @@ export default function HistoryPage() {
                                             <TableRow key={entry.id}>
                                                 <TableCell>
                                                     <div className="flex flex-col">
-                                                        <span>{format(new Date(entry.date), 'd MMMM yyyy', { locale: fr })}</span>
+                                                        <span className="font-medium">{format(new Date(entry.date), 'd MMMM yyyy', { locale: fr })}</span>
                                                         {entry.modifieLe && (
-                                                            <span className="text-xs text-yellow-600 dark:text-yellow-400 italic" title={format(new Date(entry.modifieLe), 'd MMM yy, HH:mm')}>
+                                                             <Badge variant="secondary" className="w-fit mt-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300" title={format(new Date(entry.modifieLe), 'd MMM yy, HH:mm')}>
+                                                                <HistoryIcon className="h-3 w-3 mr-1" />
                                                                 Corrigé {formatDistanceToNow(new Date(entry.modifieLe), { locale: fr, addSuffix: true })}
-                                                            </span>
+                                                            </Badge>
                                                         )}
                                                     </div>
                                                 </TableCell>
-                                                <TableCell className="font-medium">{entry.managerName}</TableCell>
+                                                <TableCell>{entry.managerName}</TableCell>
                                                 <TableCell className={entry.finalResult > 0 ? 'text-green-600' : entry.finalResult < 0 ? 'text-destructive' : ''}>
                                                     {entry.finalResult > 0 ? `Surplus de ${entry.finalResult.toLocaleString()} FCFA` : entry.finalResult < 0 ? `Manquant de ${Math.abs(entry.finalResult).toLocaleString()} FCFA` : 'Bon'}
                                                 </TableCell>

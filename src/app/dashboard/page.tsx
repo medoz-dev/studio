@@ -231,10 +231,10 @@ export default function DashboardPage() {
                 stockDetails: stockDetails,
                 arrivalDetails: arrivalDetails,
                 expenseDetails: expenses,
-                modifieLe: new Date().toISOString(), // Add modification date
+                modifieLe: new Date().toISOString(), // Add/Update modification date
             };
             const historyDocRef = doc(db, 'users', user.uid, 'history', correctionEntry.id);
-            batch.set(historyDocRef, historyEntry, { merge: true }); // Use set with merge to be safe
+            batch.set(historyDocRef, historyEntry, { merge: true });
             
             toast({
                 title: "Succès!",
@@ -458,5 +458,3 @@ export default function DashboardPage() {
     </>
   );
 }
-
-    
