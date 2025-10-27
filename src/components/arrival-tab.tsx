@@ -42,15 +42,14 @@ export default function ArrivalTab({ onArrivalUpdate, boissons, initialArrivals 
   const isCorrectionMode = !!initialArrivals;
 
   useEffect(() => {
-    if (!user) {
-        setAllArrivals([]);
-        return;
-    };
-    
-    // If in correction mode, the arrivals are passed as props and we don't listen to Firestore
     if (isCorrectionMode) {
-        setAllArrivals(initialArrivals || []);
-        return;
+      setAllArrivals(initialArrivals || []);
+      return;
+    }
+
+    if (!user) {
+      setAllArrivals([]);
+      return;
     }
 
     const arrivalsColRef = collection(db, 'users', user.uid, 'currentArrivals');
@@ -58,45 +57,46 @@ export default function ArrivalTab({ onArrivalUpdate, boissons, initialArrivals 
       const arrivalsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ArrivalItem));
       setAllArrivals(arrivalsData);
     }, (error) => {
-        console.error("Erreur de lecture des arrivages:", error);
+      console.error("Erreur de lecture des arrivages:", error);
     });
-    
+
     return () => unsubscribe();
   }, [user, isCorrectionMode, initialArrivals]);
 
   useEffect(() => {
-      const total = allArrivals.reduce((acc, arrival) => acc + arrival.total, 0);
-      onArrivalUpdate(total, allArrivals);
+    const total = allArrivals.reduce((acc, arrival) => acc + arrival.total, 0);
+    onArrivalUpdate(total, allArrivals);
   }, [allArrivals, onArrivalUpdate]);
 
   const handleAddArrival = async (newArrival: Omit<ArrivalItem, 'id'>) => {
+    if (isCorrectionMode) {
+      const arrivalWithId = { ...newArrival, id: `temp-${Date.now()}` };
+      setAllArrivals(prev => [...prev, arrivalWithId]);
+      toast({ title: "Arrivage ajouté (mode correction)", description: "L'arrivage sera sauvegardé avec la correction finale." });
+      return;
+    }
+
     if (!user) return;
     const arrivalsColRef = collection(db, 'users', user.uid, 'currentArrivals');
-    // In correction mode, we just update the local state. The final save will handle persistence.
-    if (isCorrectionMode) {
-        const arrivalWithId = { ...newArrival, id: `temp-${Date.now()}`};
-        setAllArrivals(prev => [...prev, arrivalWithId]);
-        toast({ title: "Arrivage ajouté (mode correction)", description: "L'arrivage sera sauvegardé avec la correction finale." });
-    } else {
-        await addDoc(arrivalsColRef, newArrival);
-        toast({ title: "Succès", description: "La liste des arrivages a été mise à jour." });
-    }
+    await addDoc(arrivalsColRef, newArrival);
+    toast({ title: "Succès", description: "La liste des arrivages a été mise à jour." });
   };
 
   const handleDeleteArrival = async (id: string) => {
+    if (isCorrectionMode) {
+      setAllArrivals(prev => prev.filter(a => a.id !== id));
+      toast({ title: "Arrivage supprimé (mode correction)" });
+      return;
+    }
+
     if (!user) return;
-     if (isCorrectionMode) {
-        setAllArrivals(prev => prev.filter(a => a.id !== id));
-        toast({ title: "Arrivage supprimé (mode correction)"});
-     } else {
-        const arrivalDocRef = doc(db, 'users', user.uid, 'currentArrivals', id);
-        await deleteDoc(arrivalDocRef);
-        toast({ title: "Succès", description: "Arrivage supprimé." });
-     }
+    const arrivalDocRef = doc(db, 'users', user.uid, 'currentArrivals', id);
+    await deleteDoc(arrivalDocRef);
+    toast({ title: "Succès", description: "Arrivage supprimé." });
   };
-  
+
   const totalArrivalValue = useMemo(() => {
-      return allArrivals.reduce((acc, arrival) => acc + arrival.total, 0);
+    return allArrivals.reduce((acc, arrival) => acc + arrival.total, 0);
   }, [allArrivals]);
 
   return (
@@ -104,11 +104,11 @@ export default function ArrivalTab({ onArrivalUpdate, boissons, initialArrivals 
       <div className="space-y-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                  <CardTitle>Liste des Arrivages</CardTitle>
-                  <CardDescription>Ajoutez et suivez tous les arrivages de stock.</CardDescription>
-              </div>
-              <NewArrivalDialog boissons={boissons} onAddArrival={handleAddArrival} />
+            <div>
+              <CardTitle>Liste des Arrivages</CardTitle>
+              <CardDescription>Ajoutez et suivez tous les arrivages de stock.</CardDescription>
+            </div>
+            <NewArrivalDialog boissons={boissons} onAddArrival={handleAddArrival} />
           </CardHeader>
           <CardContent>
             {allArrivals.length === 0 ? (
@@ -125,7 +125,7 @@ export default function ArrivalTab({ onArrivalUpdate, boissons, initialArrivals 
                         </div>
                         <div className="flex items-center gap-2">
                           <Button variant="outline" size="sm" onClick={() => setSelectedArrival(arrival)}>
-                              <Eye className="mr-2 h-4 w-4" /> Voir les détails
+                            <Eye className="mr-2 h-4 w-4" /> Voir les détails
                           </Button>
                           <Button variant="ghost" size="icon" onClick={() => handleDeleteArrival(arrival.id)}>
                             <Trash2 className="h-4 w-4 text-destructive" />
@@ -139,8 +139,8 @@ export default function ArrivalTab({ onArrivalUpdate, boissons, initialArrivals 
             )}
           </CardContent>
           <CardFooter className="flex justify-end items-center gap-4 font-bold text-lg border-t pt-6 mt-6">
-              <span>Total de tous les arrivages:</span>
-              <span>{totalArrivalValue.toLocaleString()} FCFA</span>
+            <span>Total de tous les arrivages:</span>
+            <span>{totalArrivalValue.toLocaleString()} FCFA</span>
           </CardFooter>
         </Card>
       </div>
@@ -159,6 +159,10 @@ function calculateArrivalValue(quantity: number, boisson: Boisson, caseSize?: nu
         ? (caseSize ?? boisson.trous[0]) 
         : (boisson.trous as number);
 
+    if (boisson.type === 'unite') {
+        return quantity * boisson.prix;
+    }
+
     const totalUnits = quantity * selectedCaseSize;
     if (totalUnits === 0) return 0;
 
@@ -166,10 +170,6 @@ function calculateArrivalValue(quantity: number, boisson: Boisson, caseSize?: nu
         // Special calculation: (units / 3) * 1000, then rounded.
         const rawValue = (totalUnits / 3) * 1000;
         return Math.ceil(rawValue / 50) * 50;
-    }
-
-    if (boisson.type === 'unite') {
-        return quantity * boisson.prix;
     }
     
     return totalUnits * boisson.prix;
@@ -407,5 +407,3 @@ function ArrivalDetailsDialog({ isOpen, setIsOpen, arrival }: ArrivalDetailsDial
     </Dialog>
   );
 }
-
-    

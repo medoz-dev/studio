@@ -393,11 +393,12 @@ export default function DashboardPage() {
   }, []);
 
   const handleArrivalUpdate = useCallback((total: number, details: ArrivalItem[]) => {
-      // In correction mode, this is handled locally
-      if(correctionEntry) {
-          setArrivalDetails(details);
-      }
-      setArrivalTotal(total);
+    setArrivalTotal(total);
+    if (correctionEntry) {
+        // In correction mode, update the main arrivalDetails state directly
+        setArrivalDetails(details);
+    }
+    // In normal mode, this will just reflect the state from the listener
   }, [correctionEntry]);
 
   const handleCancelCorrection = () => {
