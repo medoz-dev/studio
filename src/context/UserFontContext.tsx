@@ -9,6 +9,16 @@ import { cn } from '@/lib/utils';
 
 const UserFontContext = createContext({});
 
+const FONT_CLASSES = [
+  'font-body',
+  'font-roboto',
+  'font-merriweather',
+  'font-lobster',
+  'font-playfair',
+  'font-lato',
+  'font-poppins'
+];
+
 export const UserFontProvider = ({ children }: { children: ReactNode }) => {
   const { user, isLoading: authLoading } = useAuth();
   const [fontClass, setFontClass] = useState('font-body');
@@ -26,12 +36,7 @@ export const UserFontProvider = ({ children }: { children: ReactNode }) => {
           const savedFont = data.preferences?.font || 'font-body';
           
           // Remove previous font class from body
-          document.body.classList.remove(
-            'font-body',
-            'font-roboto',
-            'font-merriweather',
-            'font-lobster'
-          );
+          document.body.classList.remove(...FONT_CLASSES);
           
           // Add new font class
           document.body.classList.add(savedFont);
@@ -40,11 +45,7 @@ export const UserFontProvider = ({ children }: { children: ReactNode }) => {
       });
     } else {
         // Apply default font for logged-out users
-        document.body.classList.remove(
-          'font-roboto',
-          'font-merriweather',
-          'font-lobster'
-        );
+        document.body.classList.remove(...FONT_CLASSES);
         document.body.classList.add('font-body');
         setFontClass('font-body');
     }

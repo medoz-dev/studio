@@ -17,6 +17,9 @@ export default {
         roboto: ['Roboto', 'sans-serif'],
         lobster: ['Lobster', 'cursive'],
         merriweather: ['Merriweather', 'serif'],
+        playfair: ['Playfair Display', 'serif'],
+        lato: ['Lato', 'sans-serif'],
+        poppins: ['Poppins', 'sans-serif'],
       },
       colors: {
         background: 'hsl(var(--background))',
@@ -101,4 +104,3 @@ export default {
   },
   plugins: [require('tailwindcss-animate')],
 } satisfies Config;
-

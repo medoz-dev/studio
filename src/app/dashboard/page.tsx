@@ -140,8 +140,11 @@ function AccountDialog({ isOpen, setIsOpen, user, userData }: { isOpen: boolean,
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="font-body"><span className="font-body">Défaut (PT Sans)</span></SelectItem>
+                                    <SelectItem value="font-lato"><span className="font-lato">Simple (Lato)</span></SelectItem>
                                     <SelectItem value="font-roboto"><span className="font-roboto">Moderne (Roboto)</span></SelectItem>
+                                    <SelectItem value="font-poppins"><span className="font-poppins">Arrondie (Poppins)</span></SelectItem>
                                     <SelectItem value="font-merriweather"><span className="font-merriweather">Classique (Merriweather)</span></SelectItem>
+                                    <SelectItem value="font-playfair"><span className="font-playfair">Élégante (Playfair)</span></SelectItem>
                                     <SelectItem value="font-lobster"><span className="font-lobster">Signature (Lobster)</span></SelectItem>
                                 </SelectContent>
                             </Select>
