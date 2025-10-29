@@ -27,7 +27,7 @@ export default function LandingPage() {
 
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="w-full py-20 md:py-32 lg:py-40 bg-primary/5">
+        <section className="w-full py-16 md:py-24 lg:py-32 bg-primary/5">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 grid gap-10 md:grid-cols-2 md:items-center">
             <div className="space-y-6">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-primary">
@@ -44,12 +44,12 @@ export default function LandingPage() {
             </div>
             <div className="flex justify-center">
                 <Image 
-                    src="https://picsum.photos/seed/business%20control/600/500"
-                    alt="Tableau de bord de gestion d'entreprise"
+                    src="https://picsum.photos/seed/african%20manager/600/500"
+                    alt="Gérant africain dans un bar avec des boissons et des liqueurs"
                     width={600}
                     height={500}
                     className="rounded-xl shadow-2xl"
-                    data-ai-hint="business control"
+                    data-ai-hint="african manager"
                 />
             </div>
           </div>
