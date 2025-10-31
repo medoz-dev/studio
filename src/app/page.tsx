@@ -6,8 +6,11 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { CheckCircle, BarChart, DollarSign, Zap, FilePlus, PackageSearch, Calculator, Archive, LogIn } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import TestimonialPlayer from "@/components/TestimonialPlayer";
 
 export default function LandingPage() {
+  const testimonialText = "Depuis que j'utilise Inventaire Pro, j'ai réduit mes pertes de 25% et je passe deux fois moins de temps sur les inventaires. J'ai enfin une vision claire de mon business. Fini le casse-tête !";
+
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
       <header className="container mx-auto px-4 sm:px-6 lg:px-8 sticky top-0 z-50 bg-background/80 backdrop-blur-sm">
@@ -132,11 +135,14 @@ export default function LandingPage() {
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="max-w-3xl mx-auto text-center">
                     <p className="text-xl md:text-2xl font-medium text-foreground">
-                        "Depuis que j'utilise Inventaire Pro, j'ai réduit mes pertes de 25% et je passe deux fois moins de temps sur les inventaires. J'ai enfin une vision claire de mon business. Fini le casse-tête !"
+                        "{testimonialText}"
                     </p>
-                    <div className="mt-8">
-                        <p className="font-bold text-lg">Jean-Eudes A.</p>
-                        <p className="text-muted-foreground">Gérant du bar "Le Terminus", Cotonou</p>
+                    <div className="mt-8 flex flex-col items-center gap-4">
+                        <div>
+                            <p className="font-bold text-lg">Jean-Eudes A.</p>
+                            <p className="text-muted-foreground">Gérant du bar "Le Terminus", Cotonou</p>
+                        </div>
+                        <TestimonialPlayer textToSpeech={testimonialText} />
                     </div>
                 </div>
             </div>
@@ -272,5 +278,3 @@ function StepCard({ icon, step, title, description }: { icon: React.ReactNode, s
         </div>
     );
 }
-
-    
