@@ -9,8 +9,8 @@ import { UserFontProvider } from '@/context/UserFontContext';
 
 
 export const metadata: Metadata = {
-  title: 'Inventaire Pro',
-  description: 'Système de gestion d\'inventaire par Inventaire Pro',
+  title: "Inventaire Pro | Gestion d'Inventaire & Aide à la Décision",
+  description: "Conception et Réalisation d'un Système Informatisé pour la Gestion d'Inventaire et l'Aide à la Décision en Restauration.",
 };
 
 export default function RootLayout({
